@@ -7,7 +7,7 @@
  * @copyright Copyright (c) 2016-2017 Yaroslav Kharitonchuk
  * @license   http://framework.tlumx.xyz/license  (MIT License)
  */
-namespace Tlumx\Test\Cache;
+namespace Tlumx\Tests\Cache;
 
 abstract class CacheTestCase extends \PHPUnit_Framework_TestCase
 {
