@@ -18,10 +18,35 @@ abstract class CacheTestCase extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf("\\Psr\\Cache\\CacheItemPoolInterface", $this->getCacheDriver());
     }
 
-    public function testGetItemInvalidKey()
+    public function provideInvalidKeys()
+    {
+        return [
+            [''],
+            ['{'],
+            ['}'],
+            ['('],
+            [')'],
+            ['/'],
+            ['\\'],
+            ['@'],
+            [':'],
+            [true],
+            [false],
+            [null],
+            [9],
+            [9.9],
+            [[]],
+            [new \Exception('some')]
+        ];
+    }
+
+    /**
+     * @dataProvider provideInvalidKeys
+     */
+    public function testGetItemInvalidKey($key)
     {
         try {
-            $this->getCacheDriver()->getItem('');
+            $this->getCacheDriver()->getItem($key);
         } catch (\Exception $e) {
             $this->assertInstanceOf("\\Psr\\Cache\\InvalidArgumentException", $e);
             $this->assertInstanceOf("\\Tlumx\\Cache\\Exception\\InvalidArgumentException", $e);
@@ -35,10 +60,13 @@ abstract class CacheTestCase extends \PHPUnit_Framework_TestCase
         $this->assertEquals(null, $item->get());
     }
 
-    public function testGetItemsInvalidKey()
+    /**
+     * @dataProvider provideInvalidKeys
+     */
+    public function testGetItemsInvalidKey($key)
     {
         try {
-            $this->getCacheDriver()->getItems(['key1', '{key1}']);
+            $this->getCacheDriver()->getItems(['key1', $key]);
         } catch (\Exception $e) {
             $this->assertInstanceOf("\\Psr\\Cache\\InvalidArgumentException", $e);
             $this->assertInstanceOf("\\Tlumx\\Cache\\Exception\\InvalidArgumentException", $e);
@@ -58,10 +86,13 @@ abstract class CacheTestCase extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testHasItemInvalidKey()
+    /**
+     * @dataProvider provideInvalidKeys
+     */
+    public function testHasItemInvalidKey($key)
     {
         try {
-            $this->getCacheDriver()->hasItem('(key)');
+            $this->getCacheDriver()->hasItem($key);
         } catch (\Exception $e) {
             $this->assertInstanceOf("\\Psr\\Cache\\InvalidArgumentException", $e);
             $this->assertInstanceOf("\\Tlumx\\Cache\\Exception\\InvalidArgumentException", $e);
@@ -113,10 +144,13 @@ abstract class CacheTestCase extends \PHPUnit_Framework_TestCase
         $this->assertFalse($this->getCacheDriver()->hasItem('key1'));
     }
 
-    public function testDeleteItemsInvalidKey()
+    /**
+     * @dataProvider provideInvalidKeys
+     */
+    public function testDeleteItemsInvalidKey($key)
     {
         try {
-            $this->getCacheDriver()->deleteItems([':key', '{}()/\@:']);
+            $this->getCacheDriver()->deleteItems(['key', $key]);
         } catch (\Exception $e) {
             $this->assertInstanceOf("\\Psr\\Cache\\InvalidArgumentException", $e);
             $this->assertInstanceOf("\\Tlumx\\Cache\\Exception\\InvalidArgumentException", $e);
