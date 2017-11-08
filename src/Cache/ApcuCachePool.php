@@ -55,10 +55,10 @@ class ApcuCachePool extends AbstractCacheItemPool
     protected function getDataFromStorage($key)
     {
         $value = apcu_fetch($key);
-        if($value === false) {
+        if ($value === false) {
             return false;
         }
-        
+
         return [$value];
     }
 
@@ -89,8 +89,8 @@ class ApcuCachePool extends AbstractCacheItemPool
     {
         if (apcu_exists($key)) {
             return apcu_delete($key);
-        }        
-        
+        }
+
         return true;
     }
 
@@ -105,7 +105,7 @@ class ApcuCachePool extends AbstractCacheItemPool
             if (apcu_delete($key) === false) {
                 if (apcu_exists($key)) {
                     $deleted = false;
-                }                
+                }
             }
         }
 

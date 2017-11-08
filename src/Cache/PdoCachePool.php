@@ -170,9 +170,9 @@ class PdoCachePool extends AbstractCacheItemPool
         if ($this->isHavDataInStorage($key)) {
             $stmt = $this->dbh->prepare("DELETE FROM ".$this->table." WHERE id = :key");
             $stmt->execute([':key' => $key]);
-            return $stmt->rowCount() === 1;            
+            return $stmt->rowCount() === 1;
         }
-        
+
         return true;
     }
 
@@ -191,9 +191,9 @@ class PdoCachePool extends AbstractCacheItemPool
         if ($stmt->fetchColumn()) {
             $sql = "DELETE FROM ".$this->table." WHERE id IN (".implode(',', $quotedKeys).")";
             $stmt = $this->dbh->query($sql);
-            return $stmt->rowCount() !== 0;            
-        }        
-        
+            return $stmt->rowCount() !== 0;
+        }
+
         return true;
     }
 

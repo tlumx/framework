@@ -51,7 +51,7 @@ class MemcachedCachePool extends AbstractCacheItemPool
         if ($value === false) {
             return false;
         }
-        
+
         return [$value];
     }
 
@@ -83,7 +83,7 @@ class MemcachedCachePool extends AbstractCacheItemPool
         if ($this->memcached->get($key) !== false) {
             return $this->memcached->delete($key);
         }
-        
+
         return true;
     }
 
@@ -97,8 +97,8 @@ class MemcachedCachePool extends AbstractCacheItemPool
         foreach ($keys as $key) {
             if ($this->memcached->delete($key) === false) {
                 if ($this->memcached->get($key) !== false) {
-                    $deleted = false;                    
-                }                
+                    $deleted = false;
+                }
             }
         }
 

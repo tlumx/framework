@@ -76,7 +76,7 @@ class FileCachePool extends AbstractCacheItemPool
      */
     protected function setDataToStorage($key, $value, $ttl)
     {
-        
+
 
         $filename = $this->getFile($key);
         $path = pathinfo($filename, PATHINFO_DIRNAME);
@@ -125,11 +125,11 @@ class FileCachePool extends AbstractCacheItemPool
 
         foreach ($keys as $key) {
             $dataArr = $this->getDataFromStorage($key);
-            if(is_array($dataArr)) {
+            if (is_array($dataArr)) {
                 $data = $this->getDataFromStorage($key)[0];
                 $result[$key] = $data;
             }
-            
+
             //$data = $this->getDataFromStorage($key)[0];
             //if ($data !== false) {
               //  $result[$key] = $data;
@@ -170,7 +170,7 @@ class FileCachePool extends AbstractCacheItemPool
         if (file_exists($filename)) {
             return unlink($filename);
         }
-        
+
         return true;
     }
 
@@ -185,7 +185,7 @@ class FileCachePool extends AbstractCacheItemPool
             if ($this->deleteDataFromStorage($key) === false) {
                 if (isHavDataInStorage($key)) {
                     $deleted = false;
-                }                
+                }
             }
         }
 

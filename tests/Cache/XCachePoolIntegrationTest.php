@@ -19,9 +19,9 @@ class XCachePoolIntegrationTest extends CachePoolTest
         if (!extension_loaded('xcache')) {
             $this->markTestSkipped('The xcache extension must be loaded.');
         }
-        
+
         return new XCacheCachePool([
             'prefix' => 'tlumxframework_tmp_cache'
-        ]);        
+        ]);
     }
 }

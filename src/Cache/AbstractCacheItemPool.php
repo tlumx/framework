@@ -122,23 +122,23 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
         if ($this->deferred) {
             $this->commit();
         }*/
-        
+
         $storageKey = $this->createKey($key);
-        
-        if (isset($this->deferred[$storageKey])) {            
+
+        if (isset($this->deferred[$storageKey])) {
             $item = $this->deferred[$storageKey];
             $item2 = new CacheItem($key, $this->ttl);
             $item2->set($item->get());
             return $item2->setHit(true);
         }
 
-        
-        
+
+
         $item = new CacheItem($key, $this->ttl);
         $value = $this->getDataFromStorage($storageKey);
         if ($value === false) {
             $item->setHit(false);
-            //$item->set($value);            
+            //$item->set($value);
         } else {
             $item->setHit(true);
             $item->set($value[0]);
@@ -184,16 +184,16 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
     public function hasItem($key)
     {
         $storageKey = $this->createKey($key);
-        
+
         if (isset($this->deferred[$storageKey])) {
             $item = $this->deferred[$storageKey];
             $expiration = $item->getExpiration()->getTimestamp();
             $ttl = $expiration - time();
-            if($ttl > 0) {
+            if ($ttl > 0) {
                 return true;
-            }          
+            }
             return false;
-        }  
+        }
         /*
         if ($this->deferred) {
             $this->commit();
@@ -217,7 +217,8 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
      * {@inheritdoc}
      */
     public function deleteItem($key)
-    {/*
+    {
+/*
         if (!is_string($key) || $key === '') {
             throw new Exception\InvalidArgumentException('Cache key must be a not empty string.');
         }
@@ -225,14 +226,14 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
         if (preg_match('/['.preg_quote('{}()/\@:', '/').']/', $key)) {
             throw new Exception\InvalidArgumentException('Cache key could not contains reserved characters.');
         }*/
-        
+
         $storageKey = $this->createKey($key);
-        
+
         if (isset($this->deferred[$storageKey])) {
             unset($this->deferred[$storageKey]);
         }
 
-        
+
 
         return $this->deleteDataFromStorage($storageKey);
     }
@@ -262,27 +263,26 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
         // годен до
         $expiration = $item->getExpiration()->getTimestamp();
 
-        
+
         $ttl = $expiration - time();
         $ttl = (int) $ttl;
-        if($ttl > 0) {
+        if ($ttl > 0) {
             return $this->setDataToStorage($storageKey, $item->get(), $ttl);
-            //$ttl = 
+            //$ttl =
         }
-        
-        $this->deleteDataFromStorage($storageKey);        
-        
+
+        $this->deleteDataFromStorage($storageKey);
+
         return false;
            // $time = time();
             //if ($expiration > $time) {
             //$tmp = $expiration - $time;
-            //if ($tmp > 0 || $tmp === 0) {    
+            //if ($tmp > 0 || $tmp === 0) {
               //  $ttl = $expiration - $time;
             //}
         //}
 
             //$ttl = $expiration - $time;
-        
     }
 
     /**
@@ -291,14 +291,14 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
     public function saveDeferred(CacheItemInterface $item)
     {
         //$this->deferred[$item->getKey()] = $item;
-        $expiration = $item->getExpiration()->getTimestamp();        
+        $expiration = $item->getExpiration()->getTimestamp();
         $ttl = $expiration - time();
-        if($ttl > 0) {
+        if ($ttl > 0) {
             $this->deferred[$this->createKey($item->getKey())] = $item;
 
-            return true;            
-        }        
-        
+            return true;
+        }
+
         return false;
     }
 

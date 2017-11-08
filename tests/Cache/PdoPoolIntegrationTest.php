@@ -17,13 +17,13 @@ class PdoPoolIntegrationTest extends CachePoolTest
     protected $cacheDriver;
 
     protected $dbh;
-    
+
     public function createCachePool()
     {
         if ($this->cacheDriver) {
             return $this->cacheDriver;
         }
-        
+
         if (!extension_loaded('pdo_sqlite')) {
             $this->markTestSkipped('The pdo_sqlite extension must be loaded.');
         }
@@ -39,16 +39,16 @@ class PdoPoolIntegrationTest extends CachePoolTest
         $sql .= ")";
 
         $this->dbh->exec($sql);
-        
+
         $this->cacheDriver = new PdoCachePool($this->dbh);
-        
+
         return $this->cacheDriver;
     }
-    
+
     public function tearDown()
     {
         $this->cacheDriver = null;
-        $this->dbh = null;;
-    }     
-    
+        $this->dbh = null;
+        ;
+    }
 }

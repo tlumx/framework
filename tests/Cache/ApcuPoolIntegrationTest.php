@@ -16,7 +16,7 @@ class ApcuPoolIntegrationTest extends CachePoolTest
 {
     //protected $useRequestTime;
     protected static $useRequestTime;
-    
+
     public function createCachePool()
     {
         if (!extension_loaded('apcu')) {
@@ -28,17 +28,17 @@ class ApcuPoolIntegrationTest extends CachePoolTest
         }
 
         self::$useRequestTime = ini_get('apc.use_request_time');
-        ini_set('apc.use_request_time', 0);  
-        
+        ini_set('apc.use_request_time', 0);
+
         $pool = new ApcuCachePool([
             'prefix' => 'tlumxframework_tmp_cache'
-        ]);        
-        
+        ]);
+
         return $pool;
-    }    
-    
+    }
+
     public static function tearDownAfterClass()
     {
-        ini_set('apc.use_request_time', self::$useRequestTime);       
+        ini_set('apc.use_request_time', self::$useRequestTime);
     }
 }

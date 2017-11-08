@@ -91,7 +91,7 @@ class XCacheCachePool extends AbstractCacheItemPool
         if (xcache_isset($key)) {
             return xcache_unset($key);
         }
-        
+
         return true;
     }
 

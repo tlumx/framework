@@ -13,10 +13,10 @@ use Cache\IntegrationTests\SimpleCacheTest;
 use Tlumx\Cache\SimpleCache;
 use Tlumx\Cache\FileCachePool;
 
-class SimpleCacheIntegrationTest extends SimpleCacheTest 
+class SimpleCacheIntegrationTest extends SimpleCacheTest
 {
     protected static $cacheDir;
-    
+
     public function createSimpleCache()
     {
         self::$cacheDir = @tempnam(sys_get_temp_dir(), 'tlumxframework_tmp_cache');
@@ -30,15 +30,15 @@ class SimpleCacheIntegrationTest extends SimpleCacheTest
             $e = error_get_last();
             $this->fail("Can't create temporary cache directory: {$e['message']}");
         }
-        
+
         $options = [
             'directory' => self::$cacheDir
         ];
-        $cachePool = new FileCachePool($options);        
-        
+        $cachePool = new FileCachePool($options);
+
         return new SimpleCache($cachePool);
-    }    
-    
+    }
+
     public static function tearDownAfterClass()
     {
         testRemoveDirTree(self::$cacheDir);
