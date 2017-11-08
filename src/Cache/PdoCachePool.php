@@ -116,7 +116,7 @@ class PdoCachePool extends AbstractCacheItemPool
             return false;
         }
 
-        return $this->unserialize($result['value']);
+        return [unserialize($result['value'])];
     }
 
     /**
@@ -141,7 +141,7 @@ class PdoCachePool extends AbstractCacheItemPool
 
         $result = [];
         foreach ($values as $value) {
-            $result[$value['id']] = $this->unserialize($value['value']);
+            $result[$value['id']] = unserialize($value['value']);
         }
 
         return $result;
@@ -167,9 +167,13 @@ class PdoCachePool extends AbstractCacheItemPool
      */
     protected function deleteDataFromStorage($key)
     {
-        $stmt = $this->dbh->prepare("DELETE FROM ".$this->table." WHERE id = :key");
-        $stmt->execute([':key' => $key]);
-        return $stmt->rowCount() === 1;
+        if ($this->isHavDataInStorage($key)) {
+            $stmt = $this->dbh->prepare("DELETE FROM ".$this->table." WHERE id = :key");
+            $stmt->execute([':key' => $key]);
+            return $stmt->rowCount() === 1;            
+        }
+        
+        return true;
     }
 
     /**
@@ -182,9 +186,15 @@ class PdoCachePool extends AbstractCacheItemPool
             $quotedKeys[] = $this->dbh->quote($key);
         }
 
-        $sql = "DELETE FROM ".$this->table." WHERE id IN (".implode(',', $quotedKeys).")";
+        $sql = 'SELECT COUNT(*) from '.$this->table." WHERE id IN (".implode(',', $quotedKeys).")";
         $stmt = $this->dbh->query($sql);
-        return $stmt->rowCount() !== 0;
+        if ($stmt->fetchColumn()) {
+            $sql = "DELETE FROM ".$this->table." WHERE id IN (".implode(',', $quotedKeys).")";
+            $stmt = $this->dbh->query($sql);
+            return $stmt->rowCount() !== 0;            
+        }        
+        
+        return true;
     }
 
     /**

@@ -2,14 +2,14 @@
     "name": "tlumx/framework",
     "type": "library",
     "description": "Tlumx framework is a fast PHP MVC framework that allows you to create powerful web applications quickly and easily",
-    "keywords": ["framework","tlumx"],
-    "homepage": "http://framework.tlumx.xyz",
+    "keywords": ["framework","tlumx","mvc"],
+    "homepage": "https://framework.tlumx.xyz",
     "license": "MIT",
     "authors": [
         {
             "name": "Yaroslav Kharitonchuk",
             "email": "yarik.proger@gmail.com",
-            "homepage": "http://yarik.tlumx.xyz",
+            "homepage": "https://yarikproger.pp.ua",
             "role": "Developer"
         }
     ],
@@ -24,7 +24,8 @@
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "3.*",
-        "phpunit/phpunit": "^5.7"
+        "phpunit/phpunit": "^5.7",
+        "cache/integration-tests": "dev-master"
     },
     "autoload": {
         "psr-4": {

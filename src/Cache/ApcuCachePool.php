@@ -54,7 +54,12 @@ class ApcuCachePool extends AbstractCacheItemPool
      */
     protected function getDataFromStorage($key)
     {
-        return apcu_fetch($key);
+        $value = apcu_fetch($key);
+        if($value === false) {
+            return false;
+        }
+        
+        return [$value];
     }
 
     /**
@@ -82,7 +87,11 @@ class ApcuCachePool extends AbstractCacheItemPool
      */
     protected function deleteDataFromStorage($key)
     {
-        return apcu_delete($key);
+        if (apcu_exists($key)) {
+            return apcu_delete($key);
+        }        
+        
+        return true;
     }
 
     /**
@@ -94,7 +103,9 @@ class ApcuCachePool extends AbstractCacheItemPool
 
         foreach ($keys as $key) {
             if (apcu_delete($key) === false) {
-                $deleted = false;
+                if (apcu_exists($key)) {
+                    $deleted = false;
+                }                
             }
         }
 

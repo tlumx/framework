@@ -53,7 +53,7 @@ class XCacheCachePool extends AbstractCacheItemPool
     protected function getDataFromStorage($key)
     {
         if (xcache_isset($key)) {
-            return xcache_get($key);
+            return [xcache_get($key)];
         }
 
         return false;
@@ -88,7 +88,11 @@ class XCacheCachePool extends AbstractCacheItemPool
      */
     protected function deleteDataFromStorage($key)
     {
-        return xcache_unset($key);
+        if (xcache_isset($key)) {
+            return xcache_unset($key);
+        }
+        
+        return true;
     }
 
     /**
@@ -100,7 +104,9 @@ class XCacheCachePool extends AbstractCacheItemPool
 
         foreach ($keys as $key) {
             if (xcache_unset($key) === false) {
-                $deleted = false;
+                if (xcache_isset($key)) {
+                    $deleted = false;
+                }
             }
         }
 

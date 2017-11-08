@@ -76,14 +76,10 @@ class FileCachePool extends AbstractCacheItemPool
      */
     protected function setDataToStorage($key, $value, $ttl)
     {
-        $ttl = (int) $ttl;
+        
 
         $filename = $this->getFile($key);
         $path = pathinfo($filename, PATHINFO_DIRNAME);
-
-        if ($ttl === 0) {
-            $ttl = $this->getTtl();
-        }
 
         $expire = time() + $ttl;
         $value = $expire.serialize($value);
@@ -113,7 +109,7 @@ class FileCachePool extends AbstractCacheItemPool
         $value = file_get_contents($filename);
         $expire = (int) substr($value, 0, 10);
         if (time() < $expire) {
-            return unserialize(substr($value, 10));
+            return [unserialize(substr($value, 10))];
         }
 
         unlink($filename);
@@ -128,10 +124,16 @@ class FileCachePool extends AbstractCacheItemPool
         $result = [];
 
         foreach ($keys as $key) {
-            $data = $this->getDataFromStorage($key);
-            if ($data !== false) {
+            $dataArr = $this->getDataFromStorage($key);
+            if(is_array($dataArr)) {
+                $data = $this->getDataFromStorage($key)[0];
                 $result[$key] = $data;
             }
+            
+            //$data = $this->getDataFromStorage($key)[0];
+            //if ($data !== false) {
+              //  $result[$key] = $data;
+            //}
         }
 
         return $result;
@@ -168,7 +170,8 @@ class FileCachePool extends AbstractCacheItemPool
         if (file_exists($filename)) {
             return unlink($filename);
         }
-        return false;
+        
+        return true;
     }
 
     /**
@@ -180,7 +183,9 @@ class FileCachePool extends AbstractCacheItemPool
 
         foreach ($keys as $key) {
             if ($this->deleteDataFromStorage($key) === false) {
-                $deleted = false;
+                if (isHavDataInStorage($key)) {
+                    $deleted = false;
+                }                
             }
         }
 

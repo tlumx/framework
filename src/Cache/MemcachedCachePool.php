@@ -47,7 +47,12 @@ class MemcachedCachePool extends AbstractCacheItemPool
      */
     protected function getDataFromStorage($key)
     {
-        return $this->memcached->get($key);
+        $value = $this->memcached->get($key);
+        if ($value === false) {
+            return false;
+        }
+        
+        return [$value];
     }
 
     /**
@@ -75,7 +80,11 @@ class MemcachedCachePool extends AbstractCacheItemPool
      */
     protected function deleteDataFromStorage($key)
     {
-        return $this->memcached->delete($key);
+        if ($this->memcached->get($key) !== false) {
+            return $this->memcached->delete($key);
+        }
+        
+        return true;
     }
 
     /**
@@ -87,7 +96,9 @@ class MemcachedCachePool extends AbstractCacheItemPool
 
         foreach ($keys as $key) {
             if ($this->memcached->delete($key) === false) {
-                $deleted = false;
+                if ($this->memcached->get($key) !== false) {
+                    $deleted = false;                    
+                }                
             }
         }
 
