@@ -1,11 +1,11 @@
 <?php
 /**
- * Tlumx Framework (http://framework.tlumx.xyz/)
+ * Tlumx Framework (https://framework.tlumx.xyz/)
  *
  * @author    Yaroslav Kharitonchuk <yarik.proger@gmail.com>
  * @link      https://github.com/tlumx/framework
  * @copyright Copyright (c) 2016-2017 Yaroslav Kharitonchuk
- * @license   http://framework.tlumx.xyz/license  (MIT License)
+ * @license   https://framework.tlumx.xyz/license  (MIT License)
  */
 namespace Tlumx\Tests\Cache;
 
@@ -59,8 +59,10 @@ class CacheItemTest extends \PHPUnit_Framework_TestCase
 
     public function testExpiresAtInvalidArgumentException()
     {
-        $this->setExpectedException('InvalidArgumentException',
-                'Invalid expiration date. It can be null or implement DateTimeInterface.');
+        $this->setExpectedException(
+            'InvalidArgumentException',
+            'Invalid expiration date. It can be null or implement DateTimeInterface.'
+        );
         $this->item->expiresAt(10);
     }
 
@@ -81,8 +83,10 @@ class CacheItemTest extends \PHPUnit_Framework_TestCase
 
     public function testExpiresAfterInvalidArgumentException()
     {
-        $this->setExpectedException('InvalidArgumentException',
-                'Invalid time. It can be integer, null or instance of DateInterval.');
+        $this->setExpectedException(
+            'InvalidArgumentException',
+            'Invalid time. It can be integer, null or instance of DateInterval.'
+        );
         $this->item->expiresAfter('invalid');
     }
 
