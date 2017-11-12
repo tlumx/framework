@@ -7,7 +7,7 @@
  * @copyright Copyright (c) 2016-2017 Yaroslav Kharitonchuk
  * @license   https://framework.tlumx.xyz/license  (MIT License)
  */
-namespace Tlum\Test\Db;
+namespace Tlum\Tests\Db;
 
 use Tlumx\Db\Db;
 

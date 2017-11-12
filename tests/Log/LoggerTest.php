@@ -7,7 +7,7 @@
  * @copyright Copyright (c) 2016-2017 Yaroslav Kharitonchuk
  * @license   https://framework.tlumx.xyz/license  (MIT License)
  */
-namespace Tlumx\Test\Log;
+namespace Tlumx\Tests\Log;
 
 use Psr\Log\Test\LoggerInterfaceTest;
 use Tlumx\Log\Logger;
