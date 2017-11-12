@@ -22,7 +22,7 @@ class Syslog implements WriterInterface
      *
      * @var array
      */
-    protected $logLevels = array(
+    protected $logLevels = [
         LogLevel::EMERGENCY => LOG_EMERG,
         LogLevel::ALERT     => LOG_ALERT,
         LogLevel::CRITICAL  => LOG_CRIT,
@@ -31,7 +31,7 @@ class Syslog implements WriterInterface
         LogLevel::NOTICE    => LOG_NOTICE,
         LogLevel::INFO      => LOG_INFO,
         LogLevel::DEBUG     => LOG_DEBUG
-    );
+    ];
 
     /**
      * Syslog identity
@@ -68,11 +68,11 @@ class Syslog implements WriterInterface
     public function write(array $messages)
     {
         openlog($this->identity, LOG_PID, $this->facility);
-        
+
         foreach ($messages as $message) {
             syslog($this->logLevels[$message[1]], $this->formatRecord($message));
         }
-        
+
         closelog();
     }
 

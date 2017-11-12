@@ -13,7 +13,7 @@ use Tlumx\Log\Writer\WriterInterface;
 
 /**
  * PDO lod writer.
- * 
+ *
  * Example create for SQLite:
  * CREATE TABLE log (
  *      "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -49,7 +49,7 @@ class PdoWriter implements WriterInterface
     public function __construct(\PDO $dbh, $tableName = 'log')
     {
         $this->dbh = $dbh;
-        if(!is_string($tableName) || empty($tableName)) {
+        if (!is_string($tableName) || empty($tableName)) {
             throw new \InvalidArgumentException("Argument 'tableName' must be not empty string");
         }
         $this->tableName = $tableName;
@@ -66,9 +66,9 @@ class PdoWriter implements WriterInterface
         $stmt = $this->dbh->prepare("INSERT INTO ".$this->dbh->quote($this->tableName)
                 . " (level, level_name, message, creation_time)"
                 . " VALUES (:level, :level_name, :message, :creation_time)");
-        
+
         foreach ($messages as $record) {
-            list($datetime, $level, $levelCode, $message) = $record;            
+            list($datetime, $level, $levelCode, $message) = $record;
             $stmt->bindParam(':creation_time', $datetime->getTimestamp(), \PDO::PARAM_INT);
             $stmt->bindParam(':level', $levelCode, \PDO::PARAM_INT);
             $stmt->bindParam(':level_name', $level, \PDO::PARAM_STR);

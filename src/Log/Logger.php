@@ -16,7 +16,7 @@ use Tlumx\Log\Writer\WriterInterface;
 
 /**
  * Implementation of PSR Logger
- * 
+ *
  * @see https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-3-logger-interface.md
  */
 class Logger extends AbstractLogger
@@ -26,7 +26,7 @@ class Logger extends AbstractLogger
      *
      * @var array
      */
-    protected $levels = array(
+    protected $levels = [
         LogLevel::EMERGENCY => 800,
         LogLevel::ALERT     => 700,
         LogLevel::CRITICAL  => 600,
@@ -35,7 +35,7 @@ class Logger extends AbstractLogger
         LogLevel::NOTICE    => 300,
         LogLevel::INFO      => 200,
         LogLevel::DEBUG     => 100,
-    );
+    ];
 
     /**
      * Current logger level
@@ -49,18 +49,18 @@ class Logger extends AbstractLogger
      *
      * @var array
      */
-    protected $messages = array();
+    protected $messages = [];
 
     /**
      * Registered writers
      *
      * @var array
      */
-    protected $writers = array();
+    protected $writers = [];
 
     /**
      * Construct
-     * 
+     *
      * @param int $level
      * @throws InvalidArgumentException
      */
@@ -70,7 +70,7 @@ class Logger extends AbstractLogger
             throw new InvalidArgumentException('Level "'.$level.'" is not defined on Psr\\Log\\LogLevel');
         }
         $this->level = $level;
-        register_shutdown_function(array($this, 'shutdown'), true);
+        register_shutdown_function([$this, 'shutdown'], true);
     }
 
     /**
@@ -84,7 +84,7 @@ class Logger extends AbstractLogger
         if (!isset($this->levels[$level])) {
             throw new InvalidArgumentException('Level "'.$level.'" is not defined on Psr\\Log\\LogLevel');
         }
-        
+
         $this->level = $level;
     }
 
@@ -105,12 +105,12 @@ class Logger extends AbstractLogger
      * @param WriterInterface $writer
      * @param array $levels
      */
-    public function addWriter($name, WriterInterface $writer, array $levels = array())
+    public function addWriter($name, WriterInterface $writer, array $levels = [])
     {
-        $this->writers[$name] = array(
+        $this->writers[$name] = [
             'writer' => $writer,
             'levels' => $levels
-        );
+        ];
     }
 
     /**
@@ -121,10 +121,10 @@ class Logger extends AbstractLogger
      */
     public function removeWriter($name)
     {
-        if(!isset($this->writers[$name])) {
+        if (!isset($this->writers[$name])) {
             throw new InvalidArgumentException('writer not isset');
         }
-        
+
         unset($this->writers[$name]);
     }
 
@@ -145,15 +145,15 @@ class Logger extends AbstractLogger
      */
     public function shutdown()
     {
-        if(empty($this->messages)) {
+        if (empty($this->messages)) {
             return;
         }
-    
+
         foreach ($this->writers as $name => $writer) {
-            if(!empty($writer['levels'])) {
-                $messages = array();
+            if (!empty($writer['levels'])) {
+                $messages = [];
                 foreach ($this->messages as $message) {
-                    if(in_array($message[1], $writer['levels'])) {
+                    if (in_array($message[1], $writer['levels'])) {
                         $messages[] = $message;
                     }
                 }
@@ -162,7 +162,7 @@ class Logger extends AbstractLogger
                 $writer['writer']->write($this->messages);
             }
         }
-        $this->messages = array();
+        $this->messages = [];
     }
 
     /**
@@ -183,22 +183,22 @@ class Logger extends AbstractLogger
      * @param array $context
      * @throws InvalidArgumentException
      */
-    public function log($level, $message, array $context = array())
+    public function log($level, $message, array $context = [])
     {
         if (!isset($this->levels[$level])) {
             throw new InvalidArgumentException('Level "'.$level.'" is not defined on Psr\\Log\\LogLevel');
         }
-        
-        if($this->levels[$this->level] > $this->levels[$level]) {
+
+        if ($this->levels[$this->level] > $this->levels[$level]) {
             return;
         }
-        
+
         if (is_object($message) && !method_exists($message, '__toString')) {
             throw new InvalidArgumentException('$message must implement magic __toString() method');
         }
-        
+
         if (false !== strpos($message, '{')) {
-            $replacements = array();
+            $replacements = [];
             foreach ($context as $key => $val) {
                 if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, "__toString"))) {
                     $replacements['{'.$key.'}'] = $val;
@@ -212,7 +212,7 @@ class Logger extends AbstractLogger
             }
             $message = strtr($message, $replacements);
         }
-        
-        $this->messages[] = array(new \DateTime(), $level, $this->levels[$level], $message);
+
+        $this->messages[] = [new \DateTime(), $level, $this->levels[$level], $message];
     }
 }

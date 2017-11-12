@@ -18,7 +18,7 @@ class File implements WriterInterface
 {
     /**
      * Directory to place log files in
-     * 
+     *
      * @var string
      */
     protected $dir;
@@ -56,7 +56,7 @@ class File implements WriterInterface
         if (!is_dir($dir) || !is_writable($dir)) {
             throw new \InvalidArgumentException('Directory for log files must be writable');
         }
-        
+
         $this->dir = realpath($dir);
         $this->fileExtension = (string) $fileExtension;
     }
@@ -70,24 +70,24 @@ class File implements WriterInterface
     public function write(array $messages)
     {
         $text = '';
-        
+
         foreach ($messages as $message) {
             $text .= $this->formatRecord($message).PHP_EOL;
         }
-        
+
         $filename = $this->dir.DIRECTORY_SEPARATOR.date($this->fileNameFormat);
-        if($this->fileExtension) {
+        if ($this->fileExtension) {
             $filename = $filename . '.' . $this->fileExtension;
         }
-        
+
         if (!$handle = fopen($filename, 'a')) {
             throw new \RuntimeException("Cannot open or create log file");
         }
-        
+
         if (fwrite($handle, $text) === false) {
             throw new \RuntimeException("cannot write to file");
         }
-        
+
         fclose($handle);
     }
 
