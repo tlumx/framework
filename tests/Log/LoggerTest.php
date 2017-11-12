@@ -14,27 +14,27 @@ use Tlumx\Log\Logger;
 
 class LoggerTest extends LoggerInterfaceTest
 {
-    private $logHandler;    
-    
+    private $logHandler;
+
     public function getLogger()
     {
         $logger = new Logger();
         $this->logHandler = $logger;
-        
+
         return $logger;
     }
-    
+
     public function getLogs()
     {
         $logger = $this->logHandler;
-        
+
         $messages = $logger->getLogMessages();
-        
-        $return = array();
+
+        $return = [];
         foreach ($messages as $message) {
             $return[] = $message[1] . ' ' . $message[3];
         }
-        
+
         return $return;
-    }   
+    }
 }

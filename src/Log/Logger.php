@@ -196,7 +196,7 @@ class Logger extends AbstractLogger
         if (is_object($message) && !method_exists($message, '__toString')) {
             $message = '[object '.get_class($message).']';
         }
-        
+
         $message = (string) $message;
 
         if (false !== strpos($message, '{')) {
