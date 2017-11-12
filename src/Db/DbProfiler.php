@@ -17,14 +17,14 @@ class DbProfiler
     /**
      * @var array
      */
-    private $_profiles = [];
+    private $profiles = [];
 
     /**
      * Clear profiler
      */
     public function clear()
     {
-        $this->_profiles = [];
+        $this->profiles = [];
     }
 
     /**
@@ -36,15 +36,15 @@ class DbProfiler
      */
     public function start($sql, $params = null)
     {
-        $this->_profiles[] = [
+        $this->profiles[] = [
             'sql' => $sql,
             'params' => $params,
             'start' => microtime(true)
         ];
 
-        end($this->_profiles);
+        end($this->profiles);
 
-        return key($this->_profiles);
+        return key($this->profiles);
     }
 
     /**
@@ -55,11 +55,11 @@ class DbProfiler
      */
     public function end($key)
     {
-        if (!isset($this->_profiles[$key])) {
+        if (!isset($this->profiles[$key])) {
             throw new \InvalidArgumentException("Profiler has no query with handle '$key'.");
         }
 
-        $this->_profiles[$key]['end'] = microtime(true);
+        $this->profiles[$key]['end'] = microtime(true);
     }
 
     /**
@@ -71,17 +71,17 @@ class DbProfiler
      */
     public function getProfile($key)
     {
-        if (!isset($this->_profiles[$key])) {
+        if (!isset($this->profiles[$key])) {
             throw new \InvalidArgumentException("Profiler has no query with handle '$key'.");
         }
 
-        $end = isset($this->_profiles[$key]['end']) ? $this->_profiles[$key]['end'] : null;
-        $total = $end ? ($this->_profiles[$key]['end'] - $this->_profiles[$key]['start']) : null;
+        $end = isset($this->profiles[$key]['end']) ? $this->profiles[$key]['end'] : null;
+        $total = $end ? ($this->profiles[$key]['end'] - $this->profiles[$key]['start']) : null;
 
         return [
-            'sql' => $this->_profiles[$key]['sql'],
-            'params' => $this->_profiles[$key]['params'],
-            'start' => $this->_profiles[$key]['start'],
+            'sql' => $this->profiles[$key]['sql'],
+            'params' => $this->profiles[$key]['params'],
+            'start' => $this->profiles[$key]['start'],
             'end' => $end,
             'total' => $total
         ];
@@ -96,7 +96,7 @@ class DbProfiler
     {
         $result = [];
 
-        foreach ($this->_profiles as $key => $profile) {
+        foreach ($this->profiles as $key => $profile) {
             if (!isset($profile['end'])) {
                 continue;
             }
