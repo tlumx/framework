@@ -1,11 +1,11 @@
 <?php
 /**
- * Tlumx Framework (http://framework.tlumx.xyz/)
+ * Tlumx Framework (https://framework.tlumx.xyz/)
  *
  * @author    Yaroslav Kharitonchuk <yarik.proger@gmail.com>
  * @link      https://github.com/tlumx/framework
  * @copyright Copyright (c) 2016-2017 Yaroslav Kharitonchuk
- * @license   http://framework.tlumx.xyz/license  (MIT License)
+ * @license   https://framework.tlumx.xyz/license  (MIT License)
  */
 namespace Tlumx\Cache;
 
@@ -118,11 +118,6 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
      */
     public function getItem($key)
     {
-        /*
-        if ($this->deferred) {
-            $this->commit();
-        }*/
-
         $storageKey = $this->createKey($key);
 
         if (isset($this->deferred[$storageKey])) {
@@ -132,13 +127,10 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
             return $item2->setHit(true);
         }
 
-
-
         $item = new CacheItem($key, $this->ttl);
         $value = $this->getDataFromStorage($storageKey);
         if ($value === false) {
             $item->setHit(false);
-            //$item->set($value);
         } else {
             $item->setHit(true);
             $item->set($value[0]);
@@ -194,12 +186,7 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
             }
             return false;
         }
-        /*
-        if ($this->deferred) {
-            $this->commit();
-        }*/
 
-        //$storageKey = $this->createKey($key);
         return $this->isHavDataInStorage($storageKey);
     }
 
@@ -218,22 +205,11 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
      */
     public function deleteItem($key)
     {
-/*
-        if (!is_string($key) || $key === '') {
-            throw new Exception\InvalidArgumentException('Cache key must be a not empty string.');
-        }
-
-        if (preg_match('/['.preg_quote('{}()/\@:', '/').']/', $key)) {
-            throw new Exception\InvalidArgumentException('Cache key could not contains reserved characters.');
-        }*/
-
         $storageKey = $this->createKey($key);
 
         if (isset($this->deferred[$storageKey])) {
             unset($this->deferred[$storageKey]);
         }
-
-
 
         return $this->deleteDataFromStorage($storageKey);
     }
@@ -258,31 +234,17 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
     {
         $storageKey = $this->createKey($item->getKey());
 
-        //$ttl = $this->ttl;
-
-        // годен до
         $expiration = $item->getExpiration()->getTimestamp();
-
 
         $ttl = $expiration - time();
         $ttl = (int) $ttl;
         if ($ttl > 0) {
             return $this->setDataToStorage($storageKey, $item->get(), $ttl);
-            //$ttl =
         }
 
         $this->deleteDataFromStorage($storageKey);
 
         return false;
-           // $time = time();
-            //if ($expiration > $time) {
-            //$tmp = $expiration - $time;
-            //if ($tmp > 0 || $tmp === 0) {
-              //  $ttl = $expiration - $time;
-            //}
-        //}
-
-            //$ttl = $expiration - $time;
     }
 
     /**
@@ -290,7 +252,6 @@ abstract class AbstractCacheItemPool implements CacheItemPoolInterface
      */
     public function saveDeferred(CacheItemInterface $item)
     {
-        //$this->deferred[$item->getKey()] = $item;
         $expiration = $item->getExpiration()->getTimestamp();
         $ttl = $expiration - time();
         if ($ttl > 0) {

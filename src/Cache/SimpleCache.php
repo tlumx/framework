@@ -1,11 +1,11 @@
 <?php
 /**
- * Tlumx Framework (http://framework.tlumx.xyz/)
+ * Tlumx Framework (https://framework.tlumx.xyz/)
  *
  * @author    Yaroslav Kharitonchuk <yarik.proger@gmail.com>
  * @link      https://github.com/tlumx/framework
  * @copyright Copyright (c) 2016-2017 Yaroslav Kharitonchuk
- * @license   http://framework.tlumx.xyz/license  (MIT License)
+ * @license   https://framework.tlumx.xyz/license  (MIT License)
  */
 namespace Tlumx\Cache;
 
@@ -43,10 +43,7 @@ class SimpleCache implements CacheInterface
             throw new Exception\SimpleCacheInvalidArgumentException($e->getMessage(), $e->getCode(), $e);
         }
 
-
-
         if ($item->isHit()) {
-            //echo gettype($item->get());
             return $item->get();
         }
 
@@ -109,10 +106,8 @@ class SimpleCache implements CacheInterface
         foreach ($items as $key => $item) {
             if (!$item->isHit()) {
                 $items[$key] = $default;
-                //yield $key => $default;
             } else {
                 $items[$key] = $item->get();
-                //yield $key => $item->get();
             }
         }
 
@@ -149,7 +144,6 @@ class SimpleCache implements CacheInterface
         }
 
         try {
-            //$items = $this->cachePool->getItems(array_keys($itemsValues));
             $items = $this->cachePool->getItems($keys);
         } catch (Psr6InvalidArgumentException $e) {
             throw new Exception\SimpleCacheInvalidArgumentException($e->getMessage(), $e->getCode(), $e);
