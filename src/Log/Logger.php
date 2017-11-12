@@ -194,8 +194,10 @@ class Logger extends AbstractLogger
         }
 
         if (is_object($message) && !method_exists($message, '__toString')) {
-            throw new InvalidArgumentException('$message must implement magic __toString() method');
+            $message = '[object '.get_class($message).']';
         }
+        
+        $message = (string) $message;
 
         if (false !== strpos($message, '{')) {
             $replacements = [];
@@ -204,10 +206,7 @@ class Logger extends AbstractLogger
                     $replacements['{'.$key.'}'] = $val;
                     continue;
                 }
-                if (is_object($val)) {
-                    $replacements['{'.$key.'}'] = '[object '.get_class($val).']';
-                    continue;
-                }
+
                 $replacements['{'.$key.'}'] = '['.gettype($val).']';
             }
             $message = strtr($message, $replacements);
