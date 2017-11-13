@@ -27,7 +27,7 @@ class Session
     /**
      * @var array
      */
-    protected $sessionOptions = array(
+    protected $sessionOptions = [
         'save_path',
         'name',
         'save_handler',
@@ -57,7 +57,7 @@ class Session
         'upload_progress.name',
         'upload_progress.freq',
         'upload_progress.min_freq'
-    );
+    ];
 
     /**
      * Construct
@@ -65,13 +65,13 @@ class Session
      * @param array $options
      * @param \SessionHandlerInterface $saveHandler
      */
-    public function __construct( array $options = array(), \SessionHandlerInterface $saveHandler = null)
-    {	
+    public function __construct(array $options = [], \SessionHandlerInterface $saveHandler = null)
+    {
         session_cache_limiter('');
         ini_set('session.use_cookies', 1);
         ini_set('session.cookie_lifetime', 0);
         $this->setOptions($options);
-        if($saveHandler !== null) {
+        if ($saveHandler !== null) {
             $this->setSaveHandler($saveHandler);
         }
         session_register_shutdown();
@@ -86,19 +86,19 @@ class Session
      */
     public function getOptions($option = null)
     {
-        $options = array();
+        $options = [];
         foreach (ini_get_all('session') as $name => $value) {
             $options[substr($name, 8)] = $value['local_value'];
         }
-        
+
         if ($option) {
             if (array_key_exists($option, $options)) {
                 return $options[$option];
             } else {
-            throw new \InvalidArgumentException('Unknown option "$option".');
+                throw new \InvalidArgumentException('Unknown option "$option".');
             }
         }
-        
+
         return $options;
     }
 
@@ -111,7 +111,7 @@ class Session
     public function setOptions(array $options)
     {
         foreach ($options as $key => $value) {
-            if(in_array($key, $this->sessionOptions)) {
+            if (in_array($key, $this->sessionOptions)) {
                 ini_set('session.' . $key, $value);
             } else {
                 throw new \InvalidArgumentException('Unknown option "$key".');
@@ -147,7 +147,7 @@ class Session
      */
     public function isStarted()
     {
-        return session_status() === PHP_SESSION_ACTIVE ? TRUE : FALSE;
+        return session_status() === PHP_SESSION_ACTIVE ? true : false;
     }
 
     /**
@@ -157,11 +157,11 @@ class Session
      */
     public function start()
     {
-        if($this->isStarted()) {
+        if ($this->isStarted()) {
             return;
         }
-        
-        if(session_start() === false) {
+
+        if (session_start() === false) {
             throw new \RuntimeException('Could not start the session');
         }
     }
@@ -171,7 +171,7 @@ class Session
      */
     public function close()
     {
-        if($this->isStarted()) {
+        if ($this->isStarted()) {
             session_write_close();
         }
     }
@@ -181,20 +181,25 @@ class Session
      */
     public function destroy()
     {
-        if(!$this->isStarted()) {
+        if (!$this->isStarted()) {
             return;
         }
-        
+
         session_unset();
-        
+
         if (ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000,
-               $params["path"], $params["domain"],
-               $params["secure"], $params["httponly"]
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params["path"],
+                $params["domain"],
+                $params["secure"],
+                $params["httponly"]
             );
         }
-        
+
         session_destroy();
     }
 
@@ -219,7 +224,7 @@ class Session
         if ($this->isStarted()) {
             throw new \InvalidArgumentException('Set session id must be before start session.');
         }
-        
+
         session_id($value);
     }
 
@@ -255,11 +260,11 @@ class Session
         if ($this->isStarted()) {
             throw new \InvalidArgumentException('Set session name must be before start session.');
         }
-        
+
         if (!preg_match('/^[a-zA-Z0-9]+$/', $value)) {
             throw new \InvalidArgumentException('Name should contain only alphanumeric characters.');
         }
-        
+
         session_name($value);
     }
 
@@ -271,8 +276,8 @@ class Session
     protected function setCookieLifetime($lifetime)
     {
         ini_set('session.cookie_lifetime', (int) $lifetime);
-        
-        if ($this->isStarted()) {            
+
+        if ($this->isStarted()) {
             $this->regenerateID();
         }
     }
@@ -288,11 +293,11 @@ class Session
         if (!is_numeric($lifetime)) {
             throw new \InvalidArgumentException('Parameter "lifetime" must be numeric.');
         }
-        
+
         if (0 > $lifetime) {
             throw new \InvalidArgumentException('Parameter "lifetime" must be a positive integer or zero');
         }
-        
+
         $this->setCookieLifetime($lifetime);
     }
 
@@ -327,15 +332,15 @@ class Session
     public function set($key, $value)
     {
         $this->start();
-        
+
         if (!is_string($key) || empty($key)) {
             throw new \InvalidArgumentException('Key must be a non-empty string.');
         }
-        
+
         if ($key[0] == "_") {
             throw new \InvalidArgumentException('Key cannot start session with underscore.');
         }
-        
+
         $_SESSION[$key] = $value;
     }
 
@@ -359,9 +364,9 @@ class Session
     public function getAll()
     {
         $this->start();
-        $all  = array();
+        $all  = [];
         foreach ($_SESSION as $key => $value) {
-            if(strpos($key, $this->tlumxKey, 0) === false) {
+            if (strpos($key, $this->tlumxKey, 0) === false) {
                 $all[$key] = $value;
             }
         }
@@ -377,9 +382,10 @@ class Session
     public function remove($key)
     {
         $this->start();
-        if (!isset($_SESSION[$key]))
+        if (!isset($_SESSION[$key])) {
             return;
-        
+        }
+
         unset($_SESSION[$key]);
     }
 
@@ -389,7 +395,7 @@ class Session
     public function removeAll()
     {
         $this->start();
-        $_SESSION = array();
+        $_SESSION = [];
     }
 
     /**
@@ -406,17 +412,17 @@ class Session
         if (!is_string($key) || empty($key)) {
             throw new \InvalidArgumentException('Key must be a non-empty string.');
         }
-        
+
         $this->start();
-        
+
         $key = $this->tlumxKey . '.' . $key;
         if ($value != null) {
             $_SESSION[$key] = $value;
-        } elseif(isset($_SESSION[$key])) {
+        } elseif (isset($_SESSION[$key])) {
             $value = $_SESSION[$key];
             unset($_SESSION[$key]);
         }
-        
+
         return $value;
     }
 }
