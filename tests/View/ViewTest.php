@@ -7,7 +7,7 @@
  * @copyright Copyright (c) 2016-2017 Yaroslav Kharitonchuk
  * @license   https://framework.tlumx.xyz/license  (MIT License)
  */
-namespace Tlumx\Tests;
+namespace Tlumx\Tests\Views;
 
 use Tlumx\View\View;
 
