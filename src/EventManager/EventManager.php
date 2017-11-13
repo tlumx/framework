@@ -90,6 +90,8 @@ class EventManager
     {
         if (!$event instanceof Event) {
             $event = new Event($event, $params);
+        } else {
+            $event->setParams($params);
         }
 
         foreach ($this->getListeners($event->getName()) as $listeners) {
