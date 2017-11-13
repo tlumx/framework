@@ -9,8 +9,12 @@
  */
 namespace Tlumx\ServiceContainer\Exception;
 
-use Interop\Container\Exception\ContainerException as InteropContainerException;
+use Psr\Container\ContainerExceptionInterface as PsrContainerException;
 
-class ContainerException extends \RuntimeException implements InteropContainerException
+/**
+ * Base interface representing a generic exception in a container.
+ * PSR-11 implement the ContainerExceptionInterface.
+ */
+class ContainerException extends \RuntimeException implements PsrContainerException
 {
 }

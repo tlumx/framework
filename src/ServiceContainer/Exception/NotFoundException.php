@@ -9,8 +9,12 @@
  */
 namespace Tlumx\ServiceContainer\Exception;
 
-use Interop\Container\Exception\NotFoundException as InteropNotFoundException;
+use Psr\Container\NotFoundExceptionInterface as PsrNotFoundException;
 
-class NotFoundException extends \InvalidArgumentException implements InteropNotFoundException
+/**
+ * No entry was found in the container.
+ * PSR-11 implement the NotFoundExceptionInterface.
+ */
+class NotFoundException extends \InvalidArgumentException implements PsrNotFoundException
 {
 }

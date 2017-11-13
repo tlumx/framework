@@ -9,15 +9,16 @@
  */
 namespace Tlumx\ServiceContainer;
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface as PsrContainerInterface;
 use Tlumx\ServiceContainer\Exception\ContainerException;
 use Tlumx\ServiceContainer\Exception\NotFoundException;
 
 /**
- * Very simple dependency injection (DI) container.
- * ServiceProvider implements Interop\Container\ContainerInterface.
+ * Simple dependency injection (DI) container.
+ * ServiceProvider is a PSR-11 container implementation,
+ * and it implement the Psr\Container\ContainerInterface.
  */
-class ServiceContainer implements ContainerInterface
+class ServiceContainer implements PsrContainerInterface
 {
     /**
      * @var array
