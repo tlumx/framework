@@ -228,7 +228,7 @@ class ServiceContainer implements PsrContainerInterface
             );
         }
 
-        $constructor = $reflection->getConstructor();
+        /*$constructor = $reflection->getConstructor();
         $params = [];
         if ($constructor) {
             if (!isset($definition['args'])) {
@@ -240,6 +240,24 @@ class ServiceContainer implements PsrContainerInterface
         }
 
         $service = $reflection->newInstanceArgs($params);
+        */
+        
+        if (null !== ($constructor = $reflection->getConstructor())) {
+            // we have a constructor
+            $params = [];
+	    if ($constructor) {
+		if (!isset($definition['args'])) {
+		    throw new ContainerException(
+			'Option "args" is not exists in definition array'
+		    );
+		}
+		$params = $this->resolveArgs($constructor->getParameters(), $definition['args']);
+	    }
+
+	    $service = $reflection->newInstanceArgs($params);
+        } else {
+	    $service = $reflection->newInstance();
+        }
 
         if (!isset($definition['calls'])) {
             return $service;
