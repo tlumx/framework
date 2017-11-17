@@ -191,7 +191,7 @@ class ServiceContainer implements PsrContainerInterface
      * @param mixed $default Default value, if alias not registred.
      * @return string|mixed Service identifier or default value.
      */
-    public function getIdFromAlias($alias, $default = null)
+    public function getServiceIdFromAlias($alias, $default = null)
     {
         if (isset($this->aliases[$alias])) {
             return $this->aliases[$alias];
@@ -251,7 +251,7 @@ class ServiceContainer implements PsrContainerInterface
      * @throws ContainerException Error while service already exists and cannot
      *     be overridden.
      */
-    public function register($id, callable $service, $isShared = true)
+    public function register($id, $service, $isShared = true)
     {
         if (isset($this->immutable[$id])) {
             throw new ContainerException(sprintf(
@@ -310,12 +310,12 @@ class ServiceContainer implements PsrContainerInterface
 
             if (is_callable($factory)) {
                 $service  = $factory($this);
+            } else {
+                throw new ContainerException(
+                    'Service could not be created: "There were incorrectly '
+                        . 'transmitted data when registering the service".'
+                );
             }
-
-            throw new ContainerException(
-                'Service could not be created: "There were incorrectly '
-                    . 'transmitted data when registering the service".'
-            );
         } catch (ContainerException $e) {
             throw $e;
         } catch (\Exception $e) {
@@ -387,8 +387,8 @@ class ServiceContainer implements PsrContainerInterface
         foreach ($calls as $method => $args) {
             if (!is_callable([$service, $method])) {
                 throw new ContainerException(sprintf(
-                    'Service could not be created from definition: '
-                        . 'can not call method "%s" from class: "%s"',
+                    'Service could not be created from definition:'
+                        . ' can not call method "%s" from class: "%s"',
                     $method,
                     $className
                 ));
