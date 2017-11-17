@@ -11,5 +11,5 @@ namespace Tlumx\Tests\ServiceContainer;
 
 class NotInvokable
 {
-    
+
 }
