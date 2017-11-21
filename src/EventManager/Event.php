@@ -94,7 +94,7 @@ class Event implements EventInterface
      */
     public function setTarget($target)
     {
-        $this->target = (string) $target;
+        $this->target = $target;
     }
 
     /**
