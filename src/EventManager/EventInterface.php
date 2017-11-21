@@ -10,7 +10,9 @@
 namespace Tlumx\EventManager;
 
 /**
- * Event interface
+ * Representation of an event
+ *
+ * The proposed Psr\EventManager\EventInterface
  */
 interface EventInterface
 {
@@ -22,55 +24,62 @@ interface EventInterface
     public function getName();
 
     /**
-     * Set event name
+     * Get target/context from which event was triggered
      *
-     * @param string $name
-     * @return \Tlumx\EventManager\Event
+     * @return null|string|object
      */
-    public function setName($name);
+    public function getTarget();
 
     /**
-     * Get event params
+     * Get parameters passed to the event
      *
      * @return array
      */
     public function getParams();
 
     /**
-     * Set event params
+     * Get a single parameter by name
      *
-     * @param array $params
-     * @return \Tlumx\EventManager\Event
+     * @param  string $name
+     * @return mixed
+     */
+    public function getParam($name);
+
+    /**
+     * Set the event name
+     *
+     * @param  string $name
+     * @return void
+     */
+    public function setName($name);
+
+    /**
+     * Set the event target
+     *
+     * @param  null|string|object $target
+     * @return void
+     */
+    public function setTarget($target);
+
+    /**
+     * Set event parameters
+     *
+     * @param  array $params
+     * @return void
      */
     public function setParams(array $params);
 
     /**
-     * Get event param by name
+     * Indicate whether or not to stop propagating this event
      *
-     * @param mixed $name
-     * @param mixed $default
-     * @return mixed
+     * @param  bool $flag
      */
-    public function getParam($name, $default = null);
+    public function stopPropagation($flag);
 
     /**
-     * Set event param
-     *
-     * @param mixed $name
-     * @param mixed $value
-     * @return \Tlumx\EventManager\Event
-     */
-    public function setParam($name, $value);
-
-    /**
-     * Whether or not to stop propagation
+     * Has this event indicated event propagation should stop?
      *
      * @return bool
      */
-    public function isStoppedPropagation();
-
-    /**
-     * Stop propagation
-     */
-    public function stopPropagation();
+    public function isPropagationStopped();
 }
