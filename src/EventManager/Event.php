@@ -20,6 +20,11 @@ class Event implements EventInterface
     protected $name;
 
     /**
+     * @var null|string|object
+     */
+    protected $target;
+
+    /**
      * @var array
      */
     protected $params = [];
@@ -30,43 +35,38 @@ class Event implements EventInterface
     protected $propagationStopped = false;
 
     /**
-     * Construct
+     * Constructor
      *
      * @param string $name
+     * @param string|object|null $target
      * @param array $params
      */
-    public function __construct($name, array $params = [])
+    public function __construct($name, $target = null, array $params = [])
     {
         $this->setName($name);
+        $this->setTarget($target);
         $this->setParams($params);
     }
 
     /**
-     * Get event name
-     *
-     * @return string
+     * {@inheritDoc}
      */
     public function getName()
     {
         return $this->name;
     }
 
+
     /**
-     * Set event name
-     *
-     * @param string $name
-     * @return \Tlumx\EventManager\Event
+     * {@inheritDoc}
      */
-    public function setName($name)
+    public function getTarget()
     {
-        $this->name = (string) $name;
-        return $this;
+        return $this->target;
     }
 
     /**
-     * Get event params
-     *
-     * @return array
+     * {@inheritDoc}
      */
     public function getParams()
     {
@@ -74,57 +74,50 @@ class Event implements EventInterface
     }
 
     /**
-     * Set event params
-     *
-     * @param array $params
-     * @return \Tlumx\EventManager\Event
+     * {@inheritDoc}
+     */
+    public function getParam($name)
+    {
+        return (isset($this->params[(string) $name]) ? ($this->params[(string) $name]) : null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function setName($name)
+    {
+        $this->name = (string) $name;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function setTarget($target)
+    {
+        $this->target = (string) $target;
+    }
+
+    /**
+     * {@inheritDoc}
      */
     public function setParams(array $params)
     {
         $this->params = $params;
-        return $this;
     }
 
     /**
-     * Get event param by name
-     *
-     * @param mixed $name
-     * @param mixed $default
-     * @return mixed
+     * {@inheritDoc}
      */
-    public function getParam($name, $default = null)
+    public function stopPropagation($flag)
     {
-        return (isset($this->params[$name]) ? ($this->params[$name]) : $default);
+        $this->propagationStopped = (bool) $flag;
     }
 
     /**
-     * Set event param
-     *
-     * @param mixed $name
-     * @param mixed $value
-     * @return \Tlumx\EventManager\Event
+     * {@inheritDoc}
      */
-    public function setParam($name, $value)
-    {
-        $this->params[$name] = $value;
-        return $this;
-    }
-
-    /**
-     * Whether or not to stop propagation
-     *
-     * @return bool
-     */
-    public function isStoppedPropagation()
+    public function isPropagationStopped()
     {
         return $this->propagationStopped;
-    }
-
-    /**
-     * Stop propagation
-     */
-    public function stopPropagation()
-    {
-        $this->propagationStopped = true;
     }
 }
