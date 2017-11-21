@@ -20,24 +20,53 @@ class EventTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf('Tlumx\EventManager\EventInterface', $event);
     }
 
-    public function testEvent()
+    public function testName()
     {
         $event = new Event('Test');
-        $this->assertEquals($event->getName(), 'Test');
-        $this->assertEquals($event->getParams(), []);
-        $this->assertNull($event->getParam('some'));
-        $this->assertFalse($event->getParam('some', false));
-        $this->assertFalse($event->isStoppedPropagation());
+        $this->assertTrue('Test' === $event->getName());
+        $name = 'some';
+        $event->setName($name);
+        $this->assertTrue($name === $event->getName());
+    }
 
-        $event = new Event('Test2', ['foo' => 'bar', 'a' => 100]);
-        $this->assertEquals($event->getName(), 'Test2');
-        $event->setName('NewTest2');
-        $this->assertEquals($event->getName(), 'NewTest2');
-        $this->assertEquals($event->getParams(), ['foo' => 'bar', 'a' => 100]);
-        $this->assertEquals($event->getParam('foo'), 'bar');
-        $event->setParam('foo', 'baz');
-        $this->assertEquals($event->getParam('foo'), 'baz');
-        $event->stopPropagation();
-        $this->assertTrue($event->isStoppedPropagation());
+    public function testTarget()
+    {
+        $event = new Event('Test');
+        $this->assertTrue(null === $event->getTarget());
+        $event->setTarget($this);
+        $this->assertTrue($this === $event->getTarget());
+        $event2 = new Event('Test', $this);
+        $this->assertTrue($this === $event2->getTarget());
+    }
+
+    public function testParams()
+    {
+        $event = new Event('Test');
+        $this->assertTrue([] === $event->getParams());
+        $this->assertTrue(null === $event->getParam('param1'));
+        $params = ['param1' => 'val1', 'param2' => 'val2'];
+        $event->setParams($params);
+        $this->assertTrue($params === $event->getParams());
+        $this->assertTrue('val1' === $event->getParam('param1'));
+        $this->assertTrue('val2' === $event->getParam('param2'));
+        $this->assertTrue(null === $event->getParam('param3'));
+
+        $params = ['param1' => 'val1', 'param2' => 'val2','param3' => 'val3'];
+        $event2 = new Event('Test', null, $params);
+        $this->assertTrue($params === $event2->getParams());
+        $this->assertTrue('val1' === $event2->getParam('param1'));
+        $this->assertTrue('val2' === $event2->getParam('param2'));
+        $this->assertTrue('val3' === $event2->getParam('param3'));
+        $this->assertTrue(null === $event2->getParam('param4'));
+    }
+
+    public function testStopPropagation()
+    {
+        $event = new Event('Test');
+        $this->assertFalse($event->isPropagationStopped());
+        $event->stopPropagation(true);
+        $this->assertTrue($event->isPropagationStopped());
+        $event->stopPropagation(false);
+        $this->assertFalse($event->isPropagationStopped());
     }
 }
