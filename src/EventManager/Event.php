@@ -10,7 +10,10 @@
 namespace Tlumx\EventManager;
 
 /**
- * Event class
+ * Event class.
+ *
+ * This is implementation of EventInterface
+ * (the proposed Psr\EventManager\EventInterface).
  */
 class Event implements EventInterface
 {

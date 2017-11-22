@@ -10,9 +10,9 @@
 namespace Tlumx\EventManager;
 
 /**
- * Representation of an event
+ * Representation of an event.
  *
- * The proposed Psr\EventManager\EventInterface
+ * The proposed Psr\EventManager\EventInterface.
  */
 interface EventInterface
 {

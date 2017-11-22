@@ -10,9 +10,12 @@
 namespace Tlumx\EventManager;
 
 /**
- * EventManager class
+ * EventManager class.
+ *
+ * This is implementation of EventManagerInterface
+ * (the proposed Psr\EventManager\EventManager).
  */
-class EventManager
+class EventManager implements EventManagerInterface
 {
     /**
      * @var array
@@ -20,63 +23,63 @@ class EventManager
     protected $listeners = [];
 
     /**
-     * Add listener to Event Manager
-     *
-     * @param string $eventName
-     * @param \Closure $target
-     * @param int $priority
+     * {@inheritDoc}
      */
-    public function addListener($eventName, \Closure $target, $priority = 1)
+    public function attach($event, $callback, $priority = 0)
     {
-        $this->listeners[$eventName][$priority][] = $target;
-    }
-
-    /**
-     * Add listener object to Event Manager
-     *
-     * @param \Tlumx\EventManager\ListenerInterface $listener
-     */
-    public function addListenerObject(ListenerInterface $listener)
-    {
-        $listener->setEventManager($this);
-        $listener->addListeners();
-    }
-
-    /**
-     * Remove all listener by event name
-     *
-     * @param string $eventName
-     */
-    public function removeListeners($eventName)
-    {
-        unset($this->listeners[$eventName]);
-    }
-
-    /**
-     * Get all listener by event name
-     *
-     * @param string $eventName
-     * @return array
-     */
-    public function getListeners($eventName)
-    {
-        if (!$this->hasListeners($eventName)) {
-            return [];
+        if (is_callable($callback)) {
+            $this->listeners[(string) $event][(int) $priority][] = $callback;
+            return true;
         }
 
-        ksort($this->listeners[$eventName]);
-        return  array_values($this->listeners[$eventName]);
+        return false;
     }
 
     /**
-     * Is isset listeners be event name
-     *
-     * @param string $eventName
-     * @return bool
+     * {@inheritDoc}
      */
-    public function hasListeners($eventName)
+    public function detach($event, $callback)
     {
-        return isset($this->listeners[$eventName]);
+        $event = (string) $event;
+
+        if (!isset($this->listeners[$event])) {
+            return false;
+        }
+
+        if (!is_callable($callback)) {
+            return false;
+        }
+
+        $flag = false;
+        foreach ($this->listeners[$event] as $priority => $listeners) {
+            foreach ($listeners as $key => $val) {
+                if ($val !== $callback) {
+                    continue;
+                }
+
+                unset($this->listeners[$event][$priority][$key]);
+                $flag = true;
+
+                if (empty($this->listeners[$event][$priority])) {
+                    unset($this->listeners[$event][$priority]);
+                }
+            }
+
+            if (empty($this->listeners[$event])) {
+                unset($this->listeners[$event]);
+                break;
+            }
+        }
+
+        return $flag;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function clearListeners($event)
+    {
+        unset($this->listeners[(string) $event]);
     }
 
     /**
@@ -86,26 +89,31 @@ class EventManager
      * @param array $params
      * @return bool
      */
-    public function trigger($event, array $params = [])
+    public function trigger($event, $target = null, $argv = [])
     {
         if (!$event instanceof Event) {
-            $event = new Event($event, $params);
+            $event = new Event($event, $target, $argv);
         } else {
-            $event->setParams($params);
+            $event->setTarget($target);
+            $event->setParams($argv);
         }
 
-        foreach ($this->getListeners($event->getName()) as $listeners) {
+        $allListeners = [];
+        if (isset($this->listeners[$event->getName()])) {
+            ksort($this->listeners[$event->getName()]);
+            $allListeners = array_values($this->listeners[$event->getName()]);
+        }
+
+        $result = null;
+        foreach ($allListeners as $listeners) {
             foreach ($listeners as $listener) {
                 $result = call_user_func($listener, $event);
-                if (false === $result) {
-                    return false;
-                }
-                if ($event->isStoppedPropagation()) {
+                if ($event->isPropagationStopped()) {
                     break 2;
                 }
             }
         }
 
-        return true;
+        return $result;
     }
 }
