@@ -43,4 +43,41 @@ class SimpleCacheIntegrationTest extends SimpleCacheTest
     {
         testRemoveDirTree(self::$cacheDir);
     }
+    
+    /**
+     * @expectedException \Psr\SimpleCache\InvalidArgumentException
+     * @dataProvider invalidKeysForSetMultiple
+     */
+    public function testSetMultipleInvalidKeys($key)
+    {
+        parent::testSetMultipleInvalidKeys($key);
+    }
+
+    /**
+     * Data provider for invalid keys.
+     *
+     * @return array
+     */
+    public static function invalidKeysForSetMultiple()
+    {
+        return [
+            [''],
+            [true],
+            [false],
+            [null],
+            [2.5],
+            ['{str'],
+            ['rand{'],
+            ['rand{str'],
+            ['rand}str'],
+            ['rand(str'],
+            ['rand)str'],
+            ['rand/str'],
+            ['rand\\str'],
+            ['rand@str'],
+            ['rand:str'],
+            [new \stdClass()],
+            [['array']],
+        ];
+    }    
 }
