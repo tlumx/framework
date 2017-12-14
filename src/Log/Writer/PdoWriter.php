@@ -69,7 +69,8 @@ class PdoWriter implements WriterInterface
 
         foreach ($messages as $record) {
             list($datetime, $level, $levelCode, $message) = $record;
-            $stmt->bindParam(':creation_time', $datetime->getTimestamp(), \PDO::PARAM_INT);
+            $timestamp = $datetime->getTimestamp();
+            $stmt->bindParam(':creation_time', $timestamp, \PDO::PARAM_INT);
             $stmt->bindParam(':level', $levelCode, \PDO::PARAM_INT);
             $stmt->bindParam(':level_name', $level, \PDO::PARAM_STR);
             $stmt->bindParam(':message', $message, \PDO::PARAM_STR);
