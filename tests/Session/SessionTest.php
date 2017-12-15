@@ -11,6 +11,9 @@ namespace Tlumx\Tests\Session;
 
 use Tlumx\Session\Session;
 
+/**
+* @runTestsInSeparateProcesses
+*/
 class SessionTest extends \PHPUnit_Framework_TestCase
 {
 
@@ -189,9 +192,10 @@ class SessionTest extends \PHPUnit_Framework_TestCase
      */
     public function testRememberMe()
     {
-        $this->session->start();
+        
         $id = session_id();
         $this->session->rememberMe(1209600);
+        $this->session->start();
         $this->assertEquals(1209600, ini_get('session.cookie_lifetime'));
         $newId = session_id();
         $this->assertTrue($id != $newId);
