@@ -318,7 +318,7 @@ class ServiceContainer implements PsrContainerInterface
             }
         } catch (ContainerException $e) {
             throw $e;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw new ContainerException(
                 'Service could not be created: "Service factory may be '
                     . 'callable or string (that can be resolving to an '
