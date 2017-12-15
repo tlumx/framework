@@ -89,12 +89,12 @@ class ServiceContainerTest extends \PHPUnit_Framework_TestCase
     public function testInvalidRegisterFactoryNotCallable()
     {
         $c = new ServiceContainer();
-        $c->register('service1', 'Tlumx\Tests\ServiceContainer\A');
+        $c->register('service1', 'Tlumx\Tests\ServiceContainer\ANotFactoryNotCallable');
         $this->setExpectedException(
             'Tlumx\ServiceContainer\Exception\ContainerException',
-            'Service could not be created: "Service factory may be callable or string '
-                . '(that can be resolving to an invokable class '
-                . 'or to a FactoryInterface instance).'
+            'Service could not be created: "Service factory may be '
+                . 'callable or string (that can be resolving to an '
+                . 'invokable class or to a FactoryInterface instance).'
         );
 
         $c->get('service1');
