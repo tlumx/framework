@@ -290,6 +290,10 @@ class Session
      */
     public function rememberMe($lifetime = 1209600)
     {
+        if ($this->isStarted()) {
+            throw new \RuntimeException('Set session rememberMe (the session cookie expiry) must be before start session.');
+        }
+
         if (!is_numeric($lifetime)) {
             throw new \InvalidArgumentException('Parameter "lifetime" must be numeric.');
         }
