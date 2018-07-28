@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<ruleset name="Tlumx Framework coding standard">
+<?xml version="1.0"?>
+<ruleset name="Tlumx coding standard">
     <description>Tlumx coding standard</description>
 
     <!-- display progress -->
@@ -22,6 +22,6 @@
     </rule>
 
     <!-- Paths to check -->
-    <file>src</file>
-    <file>tests</file>
+    <file>./src</file>
+    <file>./tests</file>
 </ruleset>
