@@ -3,5 +3,6 @@
 /composer.lock
 /phpunit.xml
 /clover.xml
+/coverage/
 /coveralls-upload.json
 /docs/html/
