@@ -40,17 +40,17 @@ class DefaultNotFoundHandler implements NotFoundHandlerInterface
     public function handle(array $allowedMethods = [])
     {
         $response = $this->provider->getResponse();
-        
-        if(empty($allowedMethods)) {
+
+        if (empty($allowedMethods)) {
             $response = $response->withStatus(404);
             $message = 'Page not found';
         } else {
             $response = $response->withStatus(405);
             $message = 'Method Not Allowed';
         }
-        
+
         $config = $this->provider->getConfig();
-        if(isset($config['templates']['template_404'])) {
+        if (isset($config['templates']['template_404'])) {
             $view = $this->provider->getView();
             $view->message = $message;
             $result = $view->renderFile($config['templates']['template_404']);
@@ -58,7 +58,7 @@ class DefaultNotFoundHandler implements NotFoundHandlerInterface
             $body = sprintf("<h1>An error occurred</h1><h2>%s</h2>", $message);
             $result = sprintf("<html><head><title>%s</title><style>body {font-family: Helvetica,Arial,sans-serif;font-size: 20px;line-height: 28px;padding:20px;}</style></head><body>%s</body></html>", 'Tlumx application: '.$message, $body);
         }
-        
+
         $response->getBody()->write($result);
         $response->withHeader('Content-Type', 'text/html');
         return $response;

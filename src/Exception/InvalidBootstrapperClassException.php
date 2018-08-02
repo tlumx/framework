@@ -10,5 +10,6 @@
 namespace Tlumx\Application\Exception;
 
 class InvalidBootstrapperClassException extends \Exception
-{	
+{
+
 }

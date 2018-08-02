@@ -73,14 +73,14 @@ class Controller
      */
     public function getView()
     {
-        if(!$this->_view) {
+        if (!$this->_view) {
             $this->_view = $this->getServiceProvider()->getView();
-            if($this->getServiceProvider()->getTemplatesManager()->hasTemplatePath($this->_controllerName)) {
+            if ($this->getServiceProvider()->getTemplatesManager()->hasTemplatePath($this->_controllerName)) {
                 $path = $this->getServiceProvider()->getTemplatesManager()->getTemplatePath($this->_controllerName);
                 $this->_view->setTemplatesPath($path);
             }
         }
-        
+
         return $this->_view;
     }
 
@@ -102,7 +102,7 @@ class Controller
      */
     public function setLayout($name)
     {
-        if(!is_string($name) || !$name) {
+        if (!is_string($name) || !$name) {
             throw new \InvalidArgumentException('Layout name must be not empty string.');
         }
         $this->_layout = $name;
@@ -127,9 +127,9 @@ class Controller
      */
     public function enableLayout($flag = null)
     {
-        if($flag === true) {
+        if ($flag === true) {
             $this->_enableLayout = true;
-        } elseif($flag === false) {
+        } elseif ($flag === false) {
             $this->_enableLayout = false;
         }
         return $this->_enableLayout;
@@ -145,27 +145,27 @@ class Controller
         $request = $this->getServiceProvider()->getRequest();
         $handler = $request->getAttribute('router_result_handler');
         $this->_controllerName = $handler['controller'];
-        $this->_action = $handler['action'];        
+        $this->_action = $handler['action'];
         $action = $this->_action . 'Action';
         if (!method_exists($this, $action)) {
             throw new Exception\ActionNotFoundException(sprintf('Action "%s" not found.', $this->_action));
         }
-        
+
         $layout = $this->getServiceProvider()->getConfig('layout');
-        if(is_string($layout) && $layout) {
+        if (is_string($layout) && $layout) {
             $this->setLayout($layout);
         }
-        
+
         ob_start();
         $this->$action();
         $content = ob_get_clean();
-        
-        if($this->enableLayout()) {
+
+        if ($this->enableLayout()) {
             $layoutFile = $this->getServiceProvider()->getTemplatesManager()->getTemplate($this->getLayout());
             $this->getView()->content = $content;
             $content = $this->getView()->renderFile($layoutFile);
         }
-        
+
         $response = $this->getServiceProvider()->getResponse();
         $response->getBody()->write($content);
         $this->getServiceProvider()->setResponse($response);
@@ -211,4 +211,3 @@ class Controller
         $this->redirect($url, $status);
     }
 }
-

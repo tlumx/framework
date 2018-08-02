@@ -111,48 +111,48 @@ class ServiceProvider extends ServiceContainer
 
     /**
      * Get config
-     * 
+     *
      * @param string|null $option
      * @return mixed
      */
     public function getConfig($option = null)
     {
-        if($option === null) {
+        if ($option === null) {
             return $this->config;
         }
-        
+
         return isset($this->config[$option]) ? $this->config[$option] : null;
     }
 
     /**
      * Set config
-     * 
+     *
      * @param string $option
      * @param mixed $value
      */
     public function setConfig($option, $value = null)
     {
-        if(is_array($option)) {
+        if (is_array($option)) {
             $this->config = array_replace_recursive($this->config, $option);
             return;
         }
-        
+
         $this->config[$option] = $value;
     }
 
     /**
      * Get request
-     * 
+     *
      * @return \Psr\Http\Message\ServerRequestInterface
      * @throws \RuntimeException
      */
     public function getRequest()
     {
-        if($this->request) {
+        if ($this->request) {
             return $this->request;
         }
-        
-        if($this->has('request')) {
+
+        if ($this->has('request')) {
             $this->request = $this->get('request');
             if (!$this->request instanceof ServerRequestInterface) {
                 throw new \RuntimeException(
@@ -162,7 +162,7 @@ class ServiceProvider extends ServiceContainer
         } else {
             $this->request = ServerRequestFactory::fromGlobals();
         }
-        
+
         return $this->request;
     }
 
@@ -184,11 +184,11 @@ class ServiceProvider extends ServiceContainer
      */
     public function getResponse()
     {
-        if($this->response) {
+        if ($this->response) {
             return $this->response;
         }
-        
-        if($this->has('response')) {
+
+        if ($this->has('response')) {
             $this->response = $this->get('response');
             if (!$this->response instanceof ResponseInterface) {
                 throw new \RuntimeException(
@@ -198,7 +198,7 @@ class ServiceProvider extends ServiceContainer
         } else {
             $this->response = new Response();
         }
-        
+
         return $this->response;
     }
 
@@ -220,11 +220,11 @@ class ServiceProvider extends ServiceContainer
      */
     public function getRouter()
     {
-        if($this->router) {
+        if ($this->router) {
             return $this->router;
         }
-        
-        if($this->has('router')) {
+
+        if ($this->has('router')) {
             $this->router = $this->get('router');
             if (!$this->router instanceof RouterInterface) {
                 throw new \RuntimeException(
@@ -258,7 +258,7 @@ class ServiceProvider extends ServiceContainer
                     ));
                 }
 
-                $methods = isset($route['methods']) ? (array) $route['methods'] : ['GET'];                
+                $methods = isset($route['methods']) ? (array) $route['methods'] : ['GET'];
 
                 if (!isset($route['pattern'])) {
                     throw new \LogicException(sprintf(
@@ -273,7 +273,7 @@ class ServiceProvider extends ServiceContainer
                     throw new \LogicException(sprintf(
                         'Invalid configuration for route "%s": not isset route handler.',
                         $name
-                    ));                    
+                    ));
                 }
 
                 if (isset($route['group']) && is_string($route['group'])) {
@@ -289,12 +289,11 @@ class ServiceProvider extends ServiceContainer
                     ((string) $route['pattern']),
                     $middlewares,
                     (array) $route['handler'],
-                    $group                   
+                    $group
                 );
             }
 
             foreach ($groups as $name => $group) {
-
                 if (!is_array($group)) {
                     throw new \LogicException(sprintf(
                         'Invalid configuration for route group "%s": it must by in array.',
@@ -302,7 +301,7 @@ class ServiceProvider extends ServiceContainer
                     ));
                 }
 
-                $prefix = isset($group['prefix']) ? $group['prefix'] : '';                   
+                $prefix = isset($group['prefix']) ? $group['prefix'] : '';
 
                 $middlewares = (!isset($route['middlewares'])) ? [] : (array) $route['middlewares'];
 
@@ -310,9 +309,9 @@ class ServiceProvider extends ServiceContainer
                     (string) $name,
                     (string) $prefix,
                     $middlewares
-                );                                
+                );
             }
-        };        
+        };
     }
 
     /**
@@ -333,11 +332,11 @@ class ServiceProvider extends ServiceContainer
      */
     public function getEventManager()
     {
-        if(!$this->eventManager) {
+        if (!$this->eventManager) {
             $this->eventManager = new EventManager();
             $listeners = $this->getConfig('listeners');
-            if(is_array($listeners)) {
-                foreach($listeners as $name => $listener) {
+            if (is_array($listeners)) {
+                foreach ($listeners as $name => $listener) {
 /*                    if(!class_exists($listener)) {
                         throw new \RuntimeException(sprintf(
                                 'Event listener class "%s" does not exist',
@@ -349,15 +348,15 @@ class ServiceProvider extends ServiceContainer
 */
                     if (is_array($listener)) {
                         foreach ($listener as $l) {
-                            $this->eventManager->attach($name, $l);    
+                            $this->eventManager->attach($name, $l);
                         }
                     } else {
-                        $this->eventManager->attach($name, $listener);         
+                        $this->eventManager->attach($name, $listener);
                     }
                 }
             }
         }
-        
+
         return $this->eventManager;
     }
 
@@ -379,11 +378,11 @@ class ServiceProvider extends ServiceContainer
      */
     public function getView()
     {
-        if($this->view) {
+        if ($this->view) {
             return $this->view;
         }
-        
-        if($this->has('view')) {
+
+        if ($this->has('view')) {
             $this->view = $this->get('view');
             if (!$this->view instanceof ViewInterface) {
                 throw new \RuntimeException(
@@ -393,7 +392,7 @@ class ServiceProvider extends ServiceContainer
         } else {
             $this->view = new View();
         }
-        
+
         return $this->view;
     }
 
@@ -414,18 +413,18 @@ class ServiceProvider extends ServiceContainer
      */
     public function getTemplatesManager()
     {
-        if(!$this->templatesManager) {
+        if (!$this->templatesManager) {
             $this->templatesManager = new TemplatesManager();
             $templatesPaths = $this->getConfig('templates_paths', []);
-            if($templatesPaths) {
+            if ($templatesPaths) {
                 $this->templatesManager->setTemplatePaths($templatesPaths);
             }
             $templates = $this->getConfig('templates', []);
-            if($templates) {
+            if ($templates) {
                 $this->templatesManager->setTemplateMap($templates);
             }
         }
-        
+
         return $this->templatesManager;
     }
 
@@ -447,11 +446,11 @@ class ServiceProvider extends ServiceContainer
      */
     public function getExceptionHandler()
     {
-        if($this->exceptionHandler) {
+        if ($this->exceptionHandler) {
             return $this->exceptionHandler;
         }
-        
-        if($this->has('exception_handler')) {
+
+        if ($this->has('exception_handler')) {
             $this->exceptionHandler = $this->get('exception_handler');
             if (!$this->exceptionHandler instanceof ExceptionHandlerInterface) {
                 throw new \RuntimeException(
@@ -461,8 +460,8 @@ class ServiceProvider extends ServiceContainer
         } else {
             $this->exceptionHandler = new DefaultExceptionHandler($this);
         }
-        
-        return $this->exceptionHandler;        
+
+        return $this->exceptionHandler;
     }
 
     /**
@@ -483,11 +482,11 @@ class ServiceProvider extends ServiceContainer
      */
     public function getNotFoundHandler()
     {
-        if($this->notFoundHandler) {
+        if ($this->notFoundHandler) {
             return $this->notFoundHandler;
         }
-        
-        if($this->has('not_found_handler')) {
+
+        if ($this->has('not_found_handler')) {
             $this->notFoundHandler = $this->get('not_found_handler');
             if (!$this->notFoundHandler instanceof NotFoundHandlerInterface) {
                 throw new \RuntimeException(
@@ -497,7 +496,7 @@ class ServiceProvider extends ServiceContainer
         } else {
             $this->notFoundHandler = new DefaultNotFoundHandler($this);
         }
-        
+
         return $this->notFoundHandler;
     }
 

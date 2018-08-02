@@ -50,7 +50,7 @@ class Application
      *
      * @param array $config
      */
-    public function __construct(array $config = array())
+    public function __construct(array $config = [])
     {
         $this->serviceProvider = new ServiceProvider($config);
     }
@@ -94,18 +94,18 @@ class Application
      */
     public function add($middleware)
     {
-        if(!$this->middlewareCanAdd) {
+        if (!$this->middlewareCanAdd) {
             throw new \RuntimeException('Middleware can’t be added');
         }
-        
-        if(is_string($middleware) && $this->getServiceProvider()->has($middleware)) {
+
+        if (is_string($middleware) && $this->getServiceProvider()->has($middleware)) {
             $middleware = $this->getMiddlewareFromService($middleware);
         }
-        
-        if(!is_callable($middleware)) {
+
+        if (!is_callable($middleware)) {
             throw new \InvalidArgumentException('Middleware is not callable');
         }
-        
+
         $this->middlewares[] = $middleware;
     }
 
@@ -119,10 +119,10 @@ class Application
     {
         return function ($request, $response, $next) use ($service) {
             $mv = $this->getServiceProvider()->get($service);
-            if(!is_callable($mv)) {
+            if (!is_callable($mv)) {
                 throw new \RuntimeException(sprintf(
-                        'Middleware "%s" is not invokable',
-                        $service
+                    'Middleware "%s" is not invokable',
+                    $service
                 ));
             }
             return $mv($request, $response, $next);
@@ -143,7 +143,7 @@ class Application
         if (error_reporting() == 0) {
             return;
         }
-        
+
         throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
     }
 
@@ -156,26 +156,26 @@ class Application
     protected function bootstrap()
     {
         $bootstrappers = $this->getConfig('bootstrappers');
-        
-        if(!is_array($bootstrappers)) {
+
+        if (!is_array($bootstrappers)) {
             return;
         }
-        
+
         foreach ($bootstrappers as $k => $class) {
             $class = (string) $class;
-            if(!class_exists($class)) {
+            if (!class_exists($class)) {
                 throw new Exception\BootstrapperClassNotFoundException(
-                        sprintf('Bootstrapper class "%s" not found', $class)
+                    sprintf('Bootstrapper class "%s" not found', $class)
                 );
             }
-            
+
             $r = new \ReflectionClass($class);
-            if(!$r->isSubclassOf('Tlumx\Bootstrapper')) {
+            if (!$r->isSubclassOf('Tlumx\Bootstrapper')) {
                 throw new Exception\InvalidBootstrapperClassException(
-                        sprintf("Bootstrapper class \"%s\" must extend from Tlumx\\Bootstrapper", $class)
+                    sprintf("Bootstrapper class \"%s\" must extend from Tlumx\\Bootstrapper", $class)
                 );
             }
-            
+
             $bootstrap = new $class($this);
         }
     }
@@ -190,49 +190,48 @@ class Application
     {
         error_reporting($this->getConfig('error_reporting'));
         ini_set('display_errors', $this->getConfig('display_errors'));
-        set_error_handler(array($this, 'errorHandler'));
-        
-        try {            
+        set_error_handler([$this, 'errorHandler']);
+
+        try {
             $em = $this->serviceProvider->getEventManager();
-            $event = new Event('', null, array('application' => $this));
-            $this->bootstrap();        
+            $event = new Event('', null, ['application' => $this]);
+            $this->bootstrap();
             $event->setName(self::EVENT_POST_BOOTSTRAP);
             $em->trigger($event);
-            
+
             $this->middlewares[] = [$this, 'dispatchRouter'];
-            
-            $next = function($request, $response) use (&$next)
-            {
-                if(empty($this->middlewares)) {
+
+            $next = function ($request, $response) use (&$next) {
+                if (empty($this->middlewares)) {
                     return $response;
                 }
-                
+
                 $middleware = array_shift($this->middlewares);
-                
+
                 $result = call_user_func($middleware, $request, $response, $next);
                 if ($result instanceof ResponseInterface === false) {
                     throw new \RuntimeException(
-                            'Middleware must return instance of \Psr\Http\Message\ResponseInterface'
+                        'Middleware must return instance of \Psr\Http\Message\ResponseInterface'
                     );
                 }
                 return $result;
             };
-            
+
             $this->middlewareCanAdd = false;
             $response = $next($this->serviceProvider->getRequest(), $this->serviceProvider->getResponse());
         } catch (\Exception $e) {
             if (ob_get_level() !== 0) {
                 ob_clean();
             }
-            
+
             $handler = $this->serviceProvider->getExceptionHandler();
             $response = $handler->handle($e);
         }
-        
-        if($sendResponse === true) {
+
+        if ($sendResponse === true) {
             $this->sendResponse($response);
         }
-        
+
         return $response;
     }
 
@@ -248,11 +247,11 @@ class Application
     protected function dispatchRouter(ServerRequestInterface $request, ResponseInterface $response, callable $next)
     {
         $em = $this->serviceProvider->getEventManager();
-        $event = new Event('', null, array('application' => $this));
+        $event = new Event('', null, ['application' => $this]);
         $event->setName(self::EVENT_PRE_ROUTING);
         $em->trigger($event);
-        
-        $request = $this->serviceProvider->getRequest();        
+
+        $request = $this->serviceProvider->getRequest();
         $router = $this->serviceProvider->getRouter();
         $result = $router->match($request);
         $request = $request->withAttribute('router_result', $result);
@@ -261,45 +260,45 @@ class Application
             $request = $request->withAttribute($name, urldecode($value));
         }
         $this->serviceProvider->setRequest($request);
-        
+
         $event->setName(self::EVENT_POST_ROUTING);
         $em->trigger($event);
         $request = $this->serviceProvider->getRequest();
-        
-        if($result->isNotFound()) {
-            if($result->isMethodNotAllowed()) {
+
+        if ($result->isNotFound()) {
+            if ($result->isMethodNotAllowed()) {
                 $handler = $this->serviceProvider->getNotFoundHandler();
                 $response = $handler->handle($result->getAllowedMethods());
             } else {
                 $handler = $this->serviceProvider->getNotFoundHandler();
                 $response = $handler->handle();
             }
-            
+
             $this->serviceProvider->setResponse($response);
-            
+
             return $next($request, $response);
         }
-        
-        foreach($result->getRouteMiddlewares() as $k => $middleware ) {
-            if(is_string($middleware) && $this->serviceProvider->has($middleware)) {
+
+        foreach ($result->getRouteMiddlewares() as $k => $middleware) {
+            if (is_string($middleware) && $this->serviceProvider->has($middleware)) {
                 $middleware = $this->getMiddlewareFromService($middleware);
             }
-            
-            if(!is_callable($middleware)) {
+
+            if (!is_callable($middleware)) {
                 throw new \InvalidArgumentException('Middleware is not callable');
             }
-            
+
             $this->middlewares[] = $middleware;
         }
-        
+
         $this->middlewares[] = [$this, 'dispatch'];
-        
+
         return $next($request, $response);
     }
 
     /**
      * Dispatch
-     * 
+     *
      * @param ServerRequestInterface $request
      * @param ResponseInterface $response
      * @param callable $next
@@ -312,54 +311,58 @@ class Application
     protected function dispatch(ServerRequestInterface $request, ResponseInterface $response, callable $next)
     {
         $em = $this->serviceProvider->getEventManager();
-        $event = new Event('', null, array('application' => $this));
+        $event = new Event('', null, ['application' => $this]);
         $event->setName(self::EVENT_PRE_DISPATCH);
         $em->trigger($event);
         $request = $this->serviceProvider->getRequest();
-        
+
         $result = $request->getAttribute('router_result');
         if ($result instanceof RouterResult === false) {
             throw new Exception\InvalidRouterResultException("Router result not isset in Request");
         }
-        
+
         $handler = $result->getRouteHandler();
-        $handler['controller'] = isset($handler['controller']) ? $handler['controller'] : 'index'; 
+        $handler['controller'] = isset($handler['controller']) ? $handler['controller'] : 'index';
         $handler['action'] = isset($handler['action']) ? $handler['action'] : 'index';
-        if(!is_string($handler['controller'])){
+        if (!is_string($handler['controller'])) {
             throw new Exception\InvalidRouterException('Invalid controller name in route handler');
         }
-        if(!is_string($handler['action'])){
+        if (!is_string($handler['action'])) {
             throw new Exception\InvalidRouterException('Invalid action name in route handler');
         }
-        
+
         $controllerName = $handler['controller'];
         $controllers = $this->getConfig('controllers');
         $controllerClass = isset($controllers[$controllerName]) ? $controllers[$controllerName] : null;
-        if(!class_exists($controllerClass)) {
-            throw new Exception\ControllerNotFoundException(sprintf('Controller "%s" not exist.',
-                    $controllerName));
+        if (!class_exists($controllerClass)) {
+            throw new Exception\ControllerNotFoundException(sprintf(
+                'Controller "%s" not exist.',
+                $controllerName
+            ));
         }
-        
+
         $r = new \ReflectionClass($controllerClass);
-        if(!$r->isSubclassOf('Tlumx\Application\Controller')) {
+        if (!$r->isSubclassOf('Tlumx\Application\Controller')) {
             throw new Exception\InvalidControllerException(
-                    sprintf('Controller "%s" is not an instance of Tlumx\Application\Controller.',
-                            $controllerClass)
+                sprintf(
+                    'Controller "%s" is not an instance of Tlumx\Application\Controller.',
+                    $controllerClass
+                )
             );
         }
-        
+
         $request = $request->withAttribute('router_result_handler', $handler);
         $this->serviceProvider->setRequest($request);
         $controller = new $controllerClass($this->serviceProvider);
         $controller->run();
-        
+
         $request = $this->serviceProvider->getRequest();
         $response = $this->serviceProvider->getResponse();
-        
+
         $event->setName(self::EVENT_POST_DISPATCH);
         $em->trigger($event);
         $request = $this->serviceProvider->getRequest();
-        
+
         return $next($request, $response);
     }
 
@@ -373,11 +376,11 @@ class Application
         if (headers_sent()) {
             return;
         }
-        
+
         if (! $response->hasHeader('Content-Length') && (null !== $response->getBody()->getSize())) {
             $response = $response->withHeader('Content-Length', (string) $response->getBody()->getSize());
         }
-        
+
         // Status Line
         header(sprintf(
             'HTTP/%s %d %s',
@@ -385,7 +388,7 @@ class Application
             $response->getStatusCode(),
             $response->getReasonPhrase()
         ));
-        
+
         // Headers
         foreach ($response->getHeaders() as $header => $values) {
             $first = false;
@@ -394,11 +397,11 @@ class Application
                 $first = false;
             }
         }
-        
+
         // Body
         $body = $response->getBody();
         $body->rewind();
-        
+
         while (!$body->eof()) {
             echo $body->read(4096);
             if (connection_status() != CONNECTION_NORMAL) {

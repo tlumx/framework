@@ -29,7 +29,7 @@ class Bootstrapper
     public function __construct(Application $app)
     {
         $this->_app = $app;
-        
+
         $this->_run();
     }
 
@@ -80,35 +80,35 @@ class Bootstrapper
      */
     private function _run()
     {
-        if(method_exists($this, 'init')) {
+        if (method_exists($this, 'init')) {
             $this->init();
         }
-        
-        if(method_exists($this, 'postBootstrap')) {
-            $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_POST_BOOTSTRAP, function (){
+
+        if (method_exists($this, 'postBootstrap')) {
+            $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_POST_BOOTSTRAP, function () {
                 $this->postBootstrap();
             });
         }
-        
-        if(method_exists($this, 'preRouting')) {
-            $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_PRE_ROUTING, function (){
+
+        if (method_exists($this, 'preRouting')) {
+            $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_PRE_ROUTING, function () {
                 $this->preRouting();
             });
         }
-        
-        if(method_exists($this, 'postRouting')) {
+
+        if (method_exists($this, 'postRouting')) {
             $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_POST_ROUTING, function () {
                 $this->postRouting();
             });
         }
-        
-        if(method_exists($this, 'preDispatch')) {
+
+        if (method_exists($this, 'preDispatch')) {
             $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_PRE_DISPATCH, function () {
                 $this->preDispatch();
             });
         }
-        
-        if(method_exists($this, 'postDispatch')) {
+
+        if (method_exists($this, 'postDispatch')) {
             $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_POST_DISPATCH, function () {
                 $this->postDispatch();
             });
