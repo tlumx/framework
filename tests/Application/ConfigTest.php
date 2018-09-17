@@ -247,4 +247,13 @@ class ConfigTest extends \PHPUnit\Framework\TestCase
             'key4' => 'key4_a'
         ], $config->getAll());
     }
+
+    public function testSetNullKey()
+    {
+        $base = ['a_v', 'b_v', 'c_v'];
+        $config = new Config($base);
+        $config->set(null, 'd_v');
+        $config[] = 'e_v';
+        $this->assertEquals(['a_v', 'b_v', 'c_v', 'd_v', 'e_v'], $config->getAll());
+    }
 }
