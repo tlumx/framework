@@ -9,72 +9,54 @@
  */
 namespace Tlumx\Tests\Application;
 
-use Tlumx\Application\ServiceProvider;
+use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Container\ContainerInterface;
+use Tlumx\ServiceContainer\FactoryInterface;
 use Tlumx\View\TemplatesManager;
 use Tlumx\Router\Router;
-use Tlumx\Router\RouteCollector;
+use Tlumx\Router\Result as RouteResult;
+use Tlumx\Application\ConfigureTlumxContainer;
+use Tlumx\Application\DefaultContainerFactory;
+use Tlumx\ServiceContainer\ServiceContainer;
 
 class ControllerTest extends \PHPUnit\Framework\TestCase
 {
     protected $controller;
 
-    protected $provider;
-
-    public function getRouteDefinitionCallback()
-    {
-        return function (RouteCollector $r) {
-            $r->addRoute(
-                'foo',
-                ['GET','POST'],
-                '/foo',
-                ['midd1', 'midd2'],
-                ['_controller' => 'home','_action' => 'index']
-            );
-            $r->addRoute(
-                'article',
-                ['GET'],
-                '/articles/{id:\d+}[/{title}]',
-                ['midd1', 'midd2'],
-                ['article_handler'],
-                'adm'
-            );
-            $r->addGroup('adm', '/admin', ['adm_midd1', 'adm_midd2']);
-        };
-    }
+    protected $container;
 
     public function setUp()
     {
-        $_SERVER = [
-            'SERVER_NAME'  => 'localhost',
-            'SCRIPT_NAME' => 'index.php'
-        ];
+        $factory = new DefaultContainerFactory();
+        $this->container = $factory->create([]);
 
-        $this->provider = new ServiceProvider();
-
-        /*
-        $router = new Router();
-        $router->setRoutes([
-            'my' => [
+        // Set routes for testing
+        $config = $this->container->get('config');
+        $config->set('routes', [
+            'foo' => [
+                'methods' => ['GET','POST'],
+                'pattern' => '/foo',
+                'middlewares' => ['midd1', 'midd2'],
+                'handler' => ['controller' => 'home','action' => 'index']
+            ],
+            'article' => [
                 'methods' => ['GET'],
-                'route' => '/my/{id}',
-                'handler' => [],
-                'filters' => ['id' => '([\d-]+)'],
-                'child_routes' => [
-                    'my-sub' => [
-                        'methods' => ['GET', 'POST'],
-                        'route' => '/sub/{p}',
-                        'handler' => [],
-                        'filters' => ['p'=>'(\d+)']
-                    ]
-                ]
+                'pattern' => '/articles/{id:\d+}[/{title}]',
+                'middlewares' => ['midd1', 'midd2'],
+                'handler' => ['controller' => 'article','action' => 'edit'],
+                'group' => 'adm'
             ]
         ]);
-        $this->provider->setRouter($router);
-        */
-        $routeDefinitionCallback = $this->getRouteDefinitionCallback();
-        $router = new Router($routeDefinitionCallback);
-        $this->provider->setRouter($router);
+        $config->set('routes_groups', [
+            'adm' => [
+                'prefix' => '/admin',
+                'middlewares' => ['adm_midd1', 'adm_midd2']
+            ]
+        ]);
 
+        // Set templates
         $tm = new TemplatesManager();
         $layout = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'SomeModule' .
                 DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'main.phtml';
@@ -84,46 +66,55 @@ class ControllerTest extends \PHPUnit\Framework\TestCase
             'main' => $layout,
             'main2' => $layout2
         ]);
-        $tm->addTemplatePath('foo', __DIR__ . DIRECTORY_SEPARATOR . 'resources'.DIRECTORY_SEPARATOR.'SomeModule'.DIRECTORY_SEPARATOR.'views'.DIRECTORY_SEPARATOR.'foo');
-        $this->provider->setTemplatesManager($tm);
+        $tm->addTemplatePath('foo', __DIR__ . DIRECTORY_SEPARATOR . 'resources' .
+            DIRECTORY_SEPARATOR . 'SomeModule' . DIRECTORY_SEPARATOR . 'views' .
+            DIRECTORY_SEPARATOR . 'foo');
+        $this->container->set('templates_manager', $tm);
 
+        $config->set('layout', 'main');
 
-        $this->provider->setConfig([
-            'layout' => 'main',
-        ]);
-
-        $file = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'SomeModule' .
-                DIRECTORY_SEPARATOR . 'controllers' . DIRECTORY_SEPARATOR . 'FooController.php';
-        require_once $file;
+        // Create controller object
+        $fileController = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR .
+            'SomeModule' . DIRECTORY_SEPARATOR . 'controllers' . DIRECTORY_SEPARATOR .
+            'FooController.php';
+        require_once $fileController;
         $class = 'Foo\\FooController';
-        $this->controller = new $class($this->provider);
+
+        $factory = new $class();
+        $this->controller  = $factory($this->container);
     }
 
     public function tearDown()
     {
         unset($this->controller);
-        unset($this->provider);
+        unset($this->container);
     }
 
-    public function testGetServiceProvider()
+    public function testImplements()
     {
-        $this->assertEquals($this->provider, $this->controller->getServiceProvider());
+        $this->assertInstanceOf(RequestHandlerInterface::class, $this->controller);
+        $this->assertInstanceOf(FactoryInterface::class, $this->controller);
+    }
+
+    public function testGetContainer()
+    {
+        $this->assertEquals($this->container, $this->controller->getContainer());
     }
 
     public function testGetView()
     {
-        $tm = $this->provider->getTemplatesManager();
+        $tm = $this->container->get('templates_manager');
         $path = $tm->getTemplatePath('foo');
         $tm->addTemplatePath('index', $path);
 
-        $view = $this->provider->getView();
+        $view = $this->container->get('view');
         $this->assertEquals($view, $this->controller->getView());
         $this->assertEquals(rtrim($path, DIRECTORY_SEPARATOR), $this->controller->getView()->getTemplatesPath());
     }
 
     public function testRender()
     {
-        $tm = $this->provider->getTemplatesManager();
+        $tm = $this->container->get('templates_manager');
         $path = $tm->getTemplatePath('foo');
         $tm->addTemplatePath('index', $path);
 
@@ -145,6 +136,13 @@ class ControllerTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($this->controller->enableLayout());
     }
 
+    public function testInvalidSetLayout()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Layout name must be not empty string.');
+        $this->controller->setLayout('');
+    }
+
     public function testCreateUriFor()
     {
         $path = $this->controller->uriFor('article', ['id' => '10', 'title' => 'my-story'], ['x' => 100, 'y' => 'z']);
@@ -154,114 +152,164 @@ class ControllerTest extends \PHPUnit\Framework\TestCase
 
     public function testRedirect()
     {
-        $this->controller->redirect('/login', $status = 302);
+        $response = $this->controller->redirect('/login', $status = 302);
 
-        $this->assertEquals(302, $this->controller->getServiceProvider()->getResponse()->getStatusCode());
-        $this->assertEquals('/login', $this->controller->getServiceProvider()->getResponse()->getHeaderLine('Location'));
+        $this->assertEquals(302, $response->getStatusCode());
+        $this->assertEquals('/login', $response->getHeaderLine('Location'));
     }
 
     public function testRedirectToRoute()
     {
-        $this->controller->redirectToRoute('article', ['id' => '10', 'title' => 'my-story'], ['x' => 100, 'y' => 'z'], 302);
+        $response = $this->controller->redirectToRoute('article', [
+            'id' => '10',
+            'title' => 'my-story'
+        ], ['x' => 100, 'y' => 'z'], 302);
 
-        $this->assertEquals(302, $this->controller->getServiceProvider()->getResponse()->getStatusCode());
-        $this->assertEquals('/admin/articles/10/my-story?x=100&y=z', $this->controller->getServiceProvider()->getResponse()->getHeaderLine('Location'));
+        $this->assertEquals(302, $response->getStatusCode());
+        $this->assertEquals('/admin/articles/10/my-story?x=100&y=z', $response->getHeaderLine('Location'));
     }
 
 
     /**
      * @runInSeparateProcess
      */
-    public function testRun()
+    public function testHandle()
     {
-        $handler = [
-            'controller' => 'foo',
-            'action' => 'delta'
-        ];
+        $result = RouteResult::createSuccess(
+            'my-route',
+            ['a' => 10, 'b' => 'str1'],
+            ['GET', 'POST'],
+            ['midd1', 'midd2'],
+            ['controller' => 'foo', 'action' => 'delta']
+        );
+        $request = $this->container->get('request');
+        $request = $request->withAttribute(RouteResult::class, $result);
+        $actualResponse = $this->controller->handle($request);
+        $body = $actualResponse->getBody();
+        $body->rewind();
 
         $expected = '<div>a=some;b=123;</div>';
-
-        $request = $this->provider->getRequest();
-        $request = $request->withAttribute('router_result_handler', $handler);
-        $this->controller->getServiceProvider()->setRequest($request);
-
-        $this->controller->run();
-        $actualResponse = $this->provider->getResponse();
-        $body = $actualResponse->getBody();
-        $body->rewind();
-
         $this->assertEquals($expected, $body->getContents());
     }
 
     /**
      * @runInSeparateProcess
      */
-    public function testRun1()
+    public function testHandleNoRouteResultSet()
     {
-        $handler = [
-            'controller' => 'foo',
-            'action' => 'alpha'
-        ];
+        $request = $this->container->get('request');
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage("Must be a valid \"Tlumx\Router\Result\" objrct in the request attriute");
+        $this->controller->handle($request);
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testHandleActionNotFound()
+    {
+        $result = RouteResult::createSuccess(
+            'my-route',
+            ['a' => 10, 'b' => 'str1'],
+            ['GET', 'POST'],
+            ['midd1', 'midd2'],
+            ['controller' => 'foo', 'action' => 'invalid']
+        );
+        $request = $this->container->get('request');
+        $request = $request->withAttribute(RouteResult::class, $result);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage(sprintf(
+            'Action "%s" not found.',
+            'invalid'
+        ));
+        $this->controller->handle($request);
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testHandleActionReturnResponse()
+    {
+        $result = RouteResult::createSuccess(
+            'my-route',
+            ['a' => 10, 'b' => 'str1'],
+            ['GET', 'POST'],
+            ['midd1', 'midd2'],
+            ['controller' => 'foo', 'action' => 'resp']
+        );
+        $request = $this->container->get('request');
+        $request = $request->withAttribute(RouteResult::class, $result);
+        $actualResponse = $this->controller->handle($request);
+        $body = $actualResponse->getBody();
+        $body->rewind();
+
+        $expected = 'from resp action';
+        $this->assertEquals($expected, $body->getContents());
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testHandle1()
+    {
+        $result = RouteResult::createSuccess(
+            'my-route',
+            ['a' => 10, 'b' => 'str1'],
+            ['GET', 'POST'],
+            ['midd1', 'midd2'],
+            ['controller' => 'foo', 'action' => 'alpha']
+        );
+        $request = $this->container->get('request');
+        $request = $request->withAttribute(RouteResult::class, $result);
+        $actualResponse = $this->controller->handle($request);
+        $body = $actualResponse->getBody();
+        $body->rewind();
 
         $expected = '<html><body><div></div></body></html>';
-
-        $request = $this->provider->getRequest();
-        $request = $request->withAttribute('router_result_handler', $handler);
-        $this->controller->getServiceProvider()->setRequest($request);
-
-        $this->controller->run();
-        $actualResponse = $this->provider->getResponse();
-        $body = $actualResponse->getBody();
-        $body->rewind();
-
         $this->assertEquals($expected, $body->getContents());
     }
 
     /**
      * @runInSeparateProcess
      */
-    public function testRun2()
+    public function testHandle2()
     {
-        $handler = [
-            'controller' => 'foo',
-            'action' => 'beta'
-        ];
+        $result = RouteResult::createSuccess(
+            'my-route',
+            ['a' => 10, 'b' => 'str1'],
+            ['GET', 'POST'],
+            ['midd1', 'midd2'],
+            ['controller' => 'foo', 'action' => 'beta']
+        );
+        $request = $this->container->get('request');
+        $request = $request->withAttribute(RouteResult::class, $result);
+        $actualResponse = $this->controller->handle($request);
+        $body = $actualResponse->getBody();
+        $body->rewind();
 
         $expected = '<html><body><div>beta</div></body></html>';
-
-        $request = $this->provider->getRequest();
-        $request = $request->withAttribute('router_result_handler', $handler);
-        $this->controller->getServiceProvider()->setRequest($request);
-
-        $this->controller->run();
-        $actualResponse = $this->provider->getResponse();
-        $body = $actualResponse->getBody();
-        $body->rewind();
-
         $this->assertEquals($expected, $body->getContents());
     }
 
     /**
      * @runInSeparateProcess
      */
-    public function testRun3()
+    public function testHandle3()
     {
-        $handler = [
-            'controller' => 'foo',
-            'action' => 'gamma'
-        ];
-
-        $expected = 'gamma';
-
-        $request = $this->provider->getRequest();
-        $request = $request->withAttribute('router_result_handler', $handler);
-        $this->controller->getServiceProvider()->setRequest($request);
-
-        $this->controller->run();
-        $actualResponse = $this->provider->getResponse();
+        $result = RouteResult::createSuccess(
+            'my-route',
+            ['a' => 10, 'b' => 'str1'],
+            ['GET', 'POST'],
+            ['midd1', 'midd2'],
+            ['controller' => 'foo', 'action' => 'gamma']
+        );
+        $request = $this->container->get('request');
+        $request = $request->withAttribute(RouteResult::class, $result);
+        $actualResponse = $this->controller->handle($request);
         $body = $actualResponse->getBody();
         $body->rewind();
 
+        $expected = 'gamma';
         $this->assertEquals($expected, $body->getContents());
     }
 }
