@@ -9,6 +9,8 @@
  */
 namespace Tlumx\Application\Handler;
 
+use Psr\Http\Message\ResponseInterface;
+
 /**
  * Not found handler interface.
  */
@@ -20,5 +22,5 @@ interface NotFoundHandlerInterface
      * @param array $allowedMethods
      * @return \Psr\Http\Message\ResponseInterface
      */
-    public function handle(array $allowedMethods = []);
+    public function handle(array $allowedMethods = []): ResponseInterface;
 }
