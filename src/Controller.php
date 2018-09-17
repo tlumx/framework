@@ -9,61 +9,56 @@
  */
 namespace Tlumx\Application;
 
-use Tlumx\Application\ServiceProvider;
+use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Container\ContainerInterface;
+use Tlumx\ServiceContainer\FactoryInterface;
+use Tlumx\Router\Result as RouteResult;
 
 /**
- * Controller class.
+ * Controller class and it's also PSR-15 Psr\Http\Server\RequestHandlerInterface wrapper.
  */
-class Controller
+class Controller implements RequestHandlerInterface, FactoryInterface
 {
     /**
-     * @var \Tlumx\ServiceProvider
+     * @var \Psr\Container\ContainerInterface
      */
-    private $_provider;
+    private $container;
 
     /**
      * @var string
      */
-    private $_controllerName = 'index';
+    private $controllerNamecontainer = 'index';
 
     /**
      * @var string
      */
-    private $_action = 'index';
+    private $action = 'index';
 
     /**
      * @var \Tlumx\View\View
      */
-    private $_view;
+    private $view;
 
     /**
      * @var string
      */
-    private $_layout;
+    private $layout;
 
     /**
      * @var bool
      */
-    private $_enableLayout = false;
+    private $enableLayout = false;
 
     /**
-     * Construct
+     * Get application container
      *
-     * @param \Tlumx\ServiceProvider $provider
+     * @return \Psr\Container\ContainerInterface
      */
-    public function __construct(ServiceProvider $provider)
+    public function getContainer()
     {
-        $this->_provider = $provider;
-    }
-
-    /**
-     * Get application Service Container
-     *
-     * @return \Tlumx\ServiceProvider
-     */
-    public function getServiceProvider()
-    {
-        return $this->_provider;
+        return $this->container;
     }
 
     /**
@@ -73,15 +68,16 @@ class Controller
      */
     public function getView()
     {
-        if (!$this->_view) {
-            $this->_view = $this->getServiceProvider()->getView();
-            if ($this->getServiceProvider()->getTemplatesManager()->hasTemplatePath($this->_controllerName)) {
-                $path = $this->getServiceProvider()->getTemplatesManager()->getTemplatePath($this->_controllerName);
-                $this->_view->setTemplatesPath($path);
+        if (!$this->view) {
+            $this->view = $this->getContainer()->get('view');
+            if ($this->getContainer()->get('templates_manager')->hasTemplatePath($this->controllerNamecontainer)) {
+                $tm = $this->getContainer()->get('templates_manager');
+                $path = $tm->getTemplatePath($this->controllerNamecontainer);
+                $this->view->setTemplatesPath($path);
             }
         }
 
-        return $this->_view;
+        return $this->view;
     }
 
     /**
@@ -91,7 +87,7 @@ class Controller
      */
     public function render()
     {
-        return $this->getView()->render($this->_action);
+        return $this->getView()->render($this->action);
     }
 
     /**
@@ -102,10 +98,10 @@ class Controller
      */
     public function setLayout($name)
     {
-        if (!is_string($name) || !$name) {
+        if (!is_string($name) || empty($name)) {
             throw new \InvalidArgumentException('Layout name must be not empty string.');
         }
-        $this->_layout = $name;
+        $this->layout = $name;
         $this->enableLayout(true);
     }
 
@@ -116,11 +112,11 @@ class Controller
      */
     public function getLayout()
     {
-        return $this->_layout;
+        return $this->layout;
     }
 
     /**
-     * Enable layout
+     * Enable layout (set and get Enabled status)
      *
      * @param bool|null $flag
      * @return bool
@@ -128,86 +124,107 @@ class Controller
     public function enableLayout($flag = null)
     {
         if ($flag === true) {
-            $this->_enableLayout = true;
+            $this->enableLayout = true;
         } elseif ($flag === false) {
-            $this->_enableLayout = false;
+            $this->enableLayout = false;
         }
-        return $this->_enableLayout;
+        return $this->enableLayout;
     }
 
     /**
-     * Run
-     *
-     * @throws Exception\ActionNotFoundException
-     */
-    public function run()
+    * Create an service object (from container).
+    *
+    * @param ContainerInterface $container
+    * @return $object Service (this)
+    */
+    public function __invoke(ContainerInterface $container)
     {
-        $request = $this->getServiceProvider()->getRequest();
-        $handler = $request->getAttribute('router_result_handler');
-        $this->_controllerName = $handler['controller'];
-        $this->_action = $handler['action'];
-        $action = $this->_action . 'Action';
-        if (!method_exists($this, $action)) {
-            throw new Exception\ActionNotFoundException(sprintf('Action "%s" not found.', $this->_action));
+        $this->container = $container;
+        return $this;
+    }
+
+    /**
+     * Handle the request and return a response.
+     *
+     * @param ServerRequestInterface $request
+     * @return ResponseInterface
+     * @throws \RuntimeException
+     */
+    public function handle(ServerRequestInterface $request): ResponseInterface
+    {
+        $routeResult = $request->getAttribute(RouteResult::class, false);
+        if (! $routeResult || ! $routeResult->isSuccess()) {
+            throw new \RuntimeException("Must be a valid \"Tlumx\Router\Result\" objrct in the request attriute");
         }
 
-        $layout = $this->getServiceProvider()->getConfig('layout');
+        $handler = $routeResult->getRouteHandler();
+        $this->controllerNamecontainer = isset($handler['controller']) ? $handler['controller'] : 'index';
+        $this->action = isset($handler['action']) ? $handler['action'] : 'index';
+        $action = $this->action . 'Action';
+        if (!method_exists($this, $action)) {
+            throw new \RuntimeException(sprintf('Action "%s" not found.', $this->action));
+        }
+
+        $layout = $this->getContainer()->get('config')->get('layout');
         if (is_string($layout) && $layout) {
             $this->setLayout($layout);
         }
 
-        ob_start();
-        $this->$action();
-        $content = ob_get_clean();
-
-        if ($this->enableLayout()) {
-            $layoutFile = $this->getServiceProvider()->getTemplatesManager()->getTemplate($this->getLayout());
-            $this->getView()->content = $content;
-            $content = $this->getView()->renderFile($layoutFile);
+        $actionResponse = $this->$action();
+        if ($actionResponse instanceof ResponseInterface) {
+            return $actionResponse;
         }
 
-        $response = $this->getServiceProvider()->getResponse();
-        $response->getBody()->write($content);
-        $this->getServiceProvider()->setResponse($response);
+        if ($this->enableLayout()) {
+            $layoutFile = $this->getContainer()->get('templates_manager')->getTemplate($this->getLayout());
+            $this->getView()->content = $actionResponse;
+            $actionResponse = $this->getView()->renderFile($layoutFile);
+        }
+
+        $response = $this->getContainer()->get('response');
+        $response->getBody()->write($actionResponse);
+        return $response;
     }
 
     /**
      * Create route path
      *
      * @param string $routeName
-     * @param array $args
-     * @param array $query
+     * @param array $data
+     * @param array $queryParams
      * @return string
      */
-    public function uriFor($routeName, array $args = [], array $query = [])
+    public function uriFor($routeName, array $data = [], array $queryParams = [])
     {
-        return $this->getServiceProvider()->getRouter()->uriFor($routeName, $args, $query);
+        return $this->getContainer()->get('router')->uriFor($routeName, $data, $queryParams);
     }
 
     /**
-     * Redirect to url
+     * Create response: redirect to url
      *
      * @param string $url
      * @param int $status
+     * @return ResponseInterface
      */
     public function redirect($url, $status = 302)
     {
-        $response = $this->getServiceProvider()->getResponse()->withHeader('Location', $url);
+        $response = $this->getContainer()->get('response')->withHeader('Location', $url);
         $response = $response->withStatus($status);
-        $this->getServiceProvider()->setResponse($response);
+        return $response;
     }
 
     /**
-     * Redirect to route
+     * Create response: redirect to route
      *
      * @param string $routeName
-     * @param array $args
-     * @param array $query
+     * @param array $data
+     * @param array $queryParams
      * @param int $status
+     * @return ResponseInterface
      */
-    public function redirectToRoute($routeName, array $args = [], array $query = [], $status = 302)
+    public function redirectToRoute($routeName, array $data = [], array $queryParams = [], $status = 302)
     {
-        $url = $this->uriFor($routeName, $args, $query);
-        $this->redirect($url, $status);
+        $url = $this->uriFor($routeName, $data, $queryParams);
+        return $this->redirect($url, $status);
     }
 }
