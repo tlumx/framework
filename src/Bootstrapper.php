@@ -9,108 +9,122 @@
  */
 namespace Tlumx\Application;
 
+use Psr\Container\ContainerInterface;
+use Tlumx\Application\ConfigureContainerInterface;
+use Tlumx\Application\ApplicationEvent as AppEvent;
+
 /**
  * Bootstrapper class.
  */
 class Bootstrapper
 {
     /**
-     * Application object
-     *
-     * @var \Tlumx\Application
+     * @var \Psr\Container\ContainerInterface
      */
-    private $_app;
+    private $container;
+
+    /**
+    * @var \Tlumx\Application\ConfigureContainerInterface
+    */
+    private $configure;
 
     /**
      * Constructor
      *
-     * @param \Tlumx\Application $app
+     * @param \Psr\Container\ContainerInterface $container
+     * @var \Tlumx\Application\ConfigureContainerInterface $configure
      */
-    public function __construct(Application $app)
+    public function __construct(ContainerInterface $container, ConfigureContainerInterface $configure)
     {
-        $this->_app = $app;
+        $this->container = $container;
+        $this->configure = $configure;
 
-        $this->_run();
+        $this->run();
     }
 
     /**
-     * Get ServiceProvider object
+     * Get container
      *
-     * @return \Tlumx\ServiceProvider
+     * @return \Psr\Container\ContainerInterface
      */
-    public function getServiceProvider()
+    public function getContainer()
     {
-        return $this->_app->getServiceProvider();
+        return $this->container;
     }
 
     /**
-     * Get application config
-     *
-     * @param string $option
-     * @return mixed
-     */
-    public function getConfig($option = null)
+    * Get ConfigureContainer object
+    *
+    * @return ConfigureContainerInterface
+    */
+    public function getConfigureContainerObj()
     {
-        return $this->getServiceProvider()->getConfig($option);
-    }
-
-    /**
-     * Set application config
-     *
-     * @param string $option
-     * @param mixed $value
-     */
-    public function setConfig($option, $value = null)
-    {
-        $this->getServiceProvider()->setConfig($option, $value);
-    }
-
-    /**
-     * Add application middleware
-     *
-     * @param mixed $middleware
-     */
-    public function addMiddleware($middleware)
-    {
-        $this->_app->add($middleware);
+        return $this->configure;
     }
 
     /**
      * do Bootstrapper
      */
-    private function _run()
+    private function run()
     {
         if (method_exists($this, 'init')) {
             $this->init();
         }
 
+        if (method_exists($this, 'getConfig')) {
+            $config = $this->getConfig();
+            if (!is_array($config)) {
+                throw new Exception\InvalidBootstrapperClassException(
+                    sprintf(
+                        "Method \"getConfig\" must return array of configuration, from Bootstrapper class: \"%s\".",
+                        get_class($this)
+                    )
+                );
+            }
+            $this->getContainer()->get('config')->mergeTo($config);
+        }
+
+        if (method_exists($this, 'getServiceConfig')) {
+            $configContainer = $this->getServiceConfig();
+            if (!is_array($configContainer)) {
+                throw new Exception\InvalidBootstrapperClassException(
+                    sprintf(
+                        "Method \"getServiceConfig\" must return array of services configuration," .
+                            "from Bootstrapper class: \"%s\".",
+                        get_class($this)
+                    )
+                );
+            }
+            $this->getConfigureContainerObj()->configureContainer($this->getContainer(), $configContainer);
+        }
+
         if (method_exists($this, 'postBootstrap')) {
-            $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_POST_BOOTSTRAP, function () {
-                $this->postBootstrap();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_POST_BOOTSTRAP, function ($e) {
+                return $this->postBootstrap();
             });
         }
 
         if (method_exists($this, 'preRouting')) {
-            $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_PRE_ROUTING, function () {
-                $this->preRouting();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_PRE_ROUTING, function ($e) {
+                return $this->preRouting();
             });
         }
 
         if (method_exists($this, 'postRouting')) {
-            $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_POST_ROUTING, function () {
-                $this->postRouting();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_POST_ROUTING, function ($e) {
+                return $this->postRouting();
             });
         }
 
         if (method_exists($this, 'preDispatch')) {
-            $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_PRE_DISPATCH, function () {
-                $this->preDispatch();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_PRE_DISPATCH, function ($e) {
+                return $this->preDispatch();
             });
         }
 
         if (method_exists($this, 'postDispatch')) {
-            $this->getServiceProvider()->getEventManager()->addListener(Application::EVENT_POST_DISPATCH, function () {
-                $this->postDispatch();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_POST_DISPATCH, function ($e) {
+                return $this->postDispatch();
             });
         }
     }
