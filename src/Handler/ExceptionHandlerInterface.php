@@ -9,6 +9,8 @@
  */
 namespace Tlumx\Application\Handler;
 
+use Psr\Http\Message\ResponseInterface;
+
 /**
  * Exception handler interface.
  */
@@ -20,5 +22,5 @@ interface ExceptionHandlerInterface
      * @param \Exception $e
      * @return \Psr\Http\Message\ResponseInterface
      */
-    public function handle(\Exception $e);
+    public function handle(\Exception $e): ResponseInterface;
 }
