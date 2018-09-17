@@ -10,22 +10,26 @@
 namespace Tlumx\Tests\Application;
 
 use Tlumx\Application\Handler\DefaultNotFoundHandler;
-use Tlumx\Application\ServiceProvider;
+use Tlumx\Application\DefaultContainerFactory;
+use Tlumx\ServiceContainer\ServiceContainer;
 
 class DefaultNotFoundHandlerTest extends \PHPUnit\Framework\TestCase
 {
+    protected $container;
+
     public function setUp()
     {
         $_SERVER = [
             'SERVER_NAME'  => 'localhost',
             'SCRIPT_NAME' => 'index.php'
         ];
+        $factory = new DefaultContainerFactory();
+        $this->container = $factory->create([]);
     }
 
     public function testImplements()
     {
-        $provider = new ServiceProvider();
-        $handler = new DefaultNotFoundHandler($provider);
+        $handler = new DefaultNotFoundHandler($this->container);
         $this->assertInstanceOf('Tlumx\Application\Handler\NotFoundHandlerInterface', $handler);
     }
 
@@ -35,8 +39,7 @@ class DefaultNotFoundHandlerTest extends \PHPUnit\Framework\TestCase
      */
     public function testHandle(array $allowedMethods)
     {
-        $provider = new ServiceProvider();
-        $handler = new DefaultNotFoundHandler($provider);
+        $handler = new DefaultNotFoundHandler($this->container);
 
         $response = $handler->handle($allowedMethods);
         $this->assertInstanceOf('Psr\Http\Message\ResponseInterface', $response);
@@ -49,7 +52,9 @@ class DefaultNotFoundHandlerTest extends \PHPUnit\Framework\TestCase
         }
 
         $body = sprintf("<h1>An error occurred</h1><h2>%s</h2>", $message);
-        $result = sprintf("<html><head><title>%s</title><style>body {font-family: Helvetica,Arial,sans-serif;font-size: 20px;line-height: 28px;padding:20px;}</style></head><body>%s</body></html>", 'Tlumx application: '.$message, $body);
+        $result = sprintf("<html><head><title>%s</title><style>body{font-family:Helvetica,Arial,sans-serif;".
+            "font-size:20px;line-height:28px;padding:20px;}</style></head>".
+            "<body>%s</body></html>", 'Tlumx application: '.$message, $body);
         $body = $response->getBody();
         $body->rewind();
 
@@ -71,15 +76,17 @@ class DefaultNotFoundHandlerTest extends \PHPUnit\Framework\TestCase
     {
         $file = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'error.phtml';
 
-        $provider = new ServiceProvider();
-        $provider->setConfig(['templates' => ['template_404' => $file]]);
-        $handler = new DefaultNotFoundHandler($provider);
+        $config = $this->container->get('config');
+        $config['templates'] = [
+            'template_404' => $file
+        ];
+        $handler = new DefaultNotFoundHandler($this->container);
 
         $response = $handler->handle();
         $this->assertInstanceOf('Psr\Http\Message\ResponseInterface', $response);
         $this->assertEquals(404, $response->getStatusCode());
 
-        $view = $provider->getView();
+        $view = $this->container->get('view');
         $view->message = 'Page not found';
         $result = $view->renderFile($file);
 
