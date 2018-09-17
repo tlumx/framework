@@ -10,22 +10,26 @@
 namespace Tlumx\Tests\Application;
 
 use Tlumx\Application\Handler\DefaultExceptionHandler;
-use Tlumx\Application\ServiceProvider;
+use Tlumx\Application\DefaultContainerFactory;
+use Tlumx\ServiceContainer\ServiceContainer;
 
 class DefaultExceptionHandlerTest extends \PHPUnit\Framework\TestCase
 {
+    protected $container;
+
     public function setUp()
     {
         $_SERVER = [
             'SERVER_NAME'  => 'localhost',
             'SCRIPT_NAME' => 'index.php'
         ];
+        $factory = new DefaultContainerFactory();
+        $this->container = $factory->create([]);
     }
 
     public function testImplements()
     {
-        $provider = new ServiceProvider();
-        $handler = new DefaultExceptionHandler($provider);
+        $handler = new DefaultExceptionHandler($this->container);
         $this->assertInstanceOf('Tlumx\Application\Handler\ExceptionHandlerInterface', $handler);
     }
 
@@ -35,16 +39,17 @@ class DefaultExceptionHandlerTest extends \PHPUnit\Framework\TestCase
      */
     public function testHandle($class, $displayEexceptions, $message)
     {
-        $provider = new ServiceProvider();
-        $provider->setConfig('display_exceptions', $displayEexceptions);
-        $handler = new DefaultExceptionHandler($provider);
+        $config = $this->container->get('config');
+        $config['display_exceptions'] = $displayEexceptions;
+        $handler = new DefaultExceptionHandler($this->container);
 
         $e = new $class;
         $response = $handler->handle($e);
 
         if ($displayEexceptions) {
             $body = sprintf(
-                "<h1>An error occurred</h1><h2>%s</h2><h3>Message</h3><p>%s</p><h3>Stack trace</h3><p>%s</p>",
+                "<h1>An error occurred</h1><h2>%s</h2><h3>Message</h3>".
+                "<p>%s</p><h3>Stack trace</h3><p>%s</p>",
                 $message,
                 $e->getMessage(),
                 $e->getTraceAsString()
@@ -53,9 +58,12 @@ class DefaultExceptionHandlerTest extends \PHPUnit\Framework\TestCase
             $body = sprintf("<h1>An error occurred</h1><h2>%s</h2>", $message);
         }
 
+
         $result = sprintf(
-            "<html><head><title>%s</title><style>body {font-family: Helvetica,Arial,sans-serif;font-size: 20px;line-height: 28px;padding:20px;}</style></head><body>%s</body></html>",
-            'Tlumx application: '.$message,
+            "<html><head><title>%s</title>".
+            "<style>body{font-family:Helvetica,Arial,sans-serif;".
+            "font-size:20px;line-height:28px;padding:20px;}</style></head><body>%s</body></html>",
+            'Tlumx application: '. $message,
             $body
         );
 
@@ -63,7 +71,6 @@ class DefaultExceptionHandlerTest extends \PHPUnit\Framework\TestCase
 
         $body = $response->getBody();
         $body->rewind();
-
         $this->assertEquals($result, $body->getContents());
     }
 
@@ -82,14 +89,16 @@ class DefaultExceptionHandlerTest extends \PHPUnit\Framework\TestCase
     {
         $file = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'error.phtml';
 
-        $provider = new ServiceProvider();
-        $provider->setConfig(['templates' => ['template_error' => $file]]);
-        $handler = new DefaultExceptionHandler($provider);
+        $config = $this->container->get('config');
+        $config['templates'] = [
+            'template_error' => $file
+        ];
+        $handler = new DefaultExceptionHandler($this->container);
 
         $e = new \Exception();
         $response = $handler->handle($e);
 
-        $view = $provider->getView();
+        $view = $this->container->get('view');
         $view->message = 'Internal Server Error';
         $result = $view->renderFile($file);
 
