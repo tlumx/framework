@@ -12,13 +12,13 @@ class FooController extends Controller
 
     public function betaAction()
     {
-        echo "beta";
+        return "beta";
     }
 
     public function gammaAction()
     {
         $this->enableLayout(false);
-        echo "gamma";
+        return "gamma";
     }
 
     public function deltaAction()
@@ -26,7 +26,13 @@ class FooController extends Controller
         $this->setLayout('main2');
         $this->getView()->a = 'some';
         $this->getView()->b = 123;
-        //$this->getView()->display('delta.phtml');
-        echo $this->render();
+        return $this->render();
+    }
+
+    public function respAction()
+    {
+        $response = $this->getContainer()->get('response');
+        $response->getBody()->write('from resp action');
+        return $response;
     }
 }
