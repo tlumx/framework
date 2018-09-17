@@ -9,7 +9,8 @@
  */
 namespace Tlumx\Application\Handler;
 
-use Tlumx\Application\ServiceProvider;
+use Psr\Container\ContainerInterface;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * Default not found handler.
@@ -17,18 +18,18 @@ use Tlumx\Application\ServiceProvider;
 class DefaultNotFoundHandler implements NotFoundHandlerInterface
 {
     /**
-     * @var \Tlumx\ServiceProvider
+     * @var Psr\Container\ContainerInterface
      */
-    protected $provider;
+    protected $container;
 
     /**
      * Constructor
      *
-     * @param ServiceProvider $provider
+     * @param ContainerInterface $container
      */
-    public function __construct(ServiceProvider $provider)
+    public function __construct(ContainerInterface $container)
     {
-        $this->provider = $provider;
+        $this->container = $container;
     }
 
     /**
@@ -37,9 +38,9 @@ class DefaultNotFoundHandler implements NotFoundHandlerInterface
      * @param array $allowedMethods
      * @return \Psr\Http\Message\ResponseInterface
      */
-    public function handle(array $allowedMethods = [])
+    public function handle(array $allowedMethods = []): ResponseInterface
     {
-        $response = $this->provider->getResponse();
+        $response = $this->container->get('response');
 
         if (empty($allowedMethods)) {
             $response = $response->withStatus(404);
@@ -49,14 +50,20 @@ class DefaultNotFoundHandler implements NotFoundHandlerInterface
             $message = 'Method Not Allowed';
         }
 
-        $config = $this->provider->getConfig();
+        $config = $this->container->get('config');
         if (isset($config['templates']['template_404'])) {
-            $view = $this->provider->getView();
+            $view = $this->container->get('view');
             $view->message = $message;
             $result = $view->renderFile($config['templates']['template_404']);
         } else {
             $body = sprintf("<h1>An error occurred</h1><h2>%s</h2>", $message);
-            $result = sprintf("<html><head><title>%s</title><style>body {font-family: Helvetica,Arial,sans-serif;font-size: 20px;line-height: 28px;padding:20px;}</style></head><body>%s</body></html>", 'Tlumx application: '.$message, $body);
+            $result = sprintf(
+                "<html><head><title>%s</title>" .
+                "<style>body{font-family:Helvetica,Arial,sans-serif;font-size:20px;" .
+                "line-height:28px;padding:20px;}</style></head><body>%s</body></html>",
+                'Tlumx application: '. $message,
+                $body
+            );
         }
 
         $response->getBody()->write($result);
