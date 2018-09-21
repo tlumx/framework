@@ -10,116 +10,170 @@
 namespace Tlumx\Tests\Application;
 
 use Tlumx\Application\Application;
+use Tlumx\Application\ConfigureContainerInterface;
+use Psr\Container\ContainerInterface;
+use Psr\Http\Message\ResponseInterface;
+use Zend\Diactoros\Response;
+use Tlumx\Application\Exception\BootstrapperClassNotFoundException;
+use Tlumx\Application\Exception\InvalidBootstrapperClassException;
+use Tlumx\Application\ApplicationEvent;
+use Tlumx\View\TemplatesManager;
 
 class ApplicationTest extends \PHPUnit\Framework\TestCase
 {
 
-    protected $appConfig = [
-        'routes' => [
-            'index' => [
-                'methods' => ['GET'],
-                'pattern' => '/',
-                'middlewares' => [],
-                'handler' => []
-            ],
-            'foo' => [
-                'methods' => ['GET','POST'],
-                'pattern' => '/foo',
-                'middlewares' => ['midd1', 'midd2'],
-                'handler' => ['_controller' => 'home','_action' => 'index']
-            ],
-            'article' => [
-                'methods' => ['GET'],
-                'pattern' => '/articles/{id:\d+}[/{title}]',
-                'middlewares' => ['midd1', 'midd2'],
-                'handler' => ['article_handler'],
-                'group' => 'adm'
-            ]
-        ],
-        'routes_groups' => [
-            'adm' => [
-                'prefix' => '/admin',
-                'middlewares' => ['adm_midd1', 'adm_midd2']
-            ]
-        ],
-        'router_cache_enabled' => false,
-        'router_cache_file' => ''
-    ];
-
-    public function setUp()
+    public function tearDown()
     {
-        $_SERVER = [
-            'SERVER_NAME'  => 'localhost',
-            'SCRIPT_NAME' => 'index.php'
+        restore_error_handler();
+        restore_exception_handler();
+    }
+
+    public function testInvalidInputParameter()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid input parameter "containerOrConfig": '.
+            '"expected a ContainerInterface or congiguration array".');
+        $app = new Application('not_array_and_not_container');
+    }
+
+    public function testConstructorConfigureContainerNull()
+    {
+        $app = new Application([]);
+
+        $class = new \ReflectionClass($app);
+        $propertyConfigureContainer = $class->getProperty('configureContainer');
+        $propertyConfigureContainer->setAccessible(true);
+        $configureObj = $propertyConfigureContainer->getValue($app);
+
+        $this->assertInstanceOf(ConfigureContainerInterface::class, $configureObj);
+        $this->assertEquals($configureObj, $app->getConfigureContainerObj());
+    }
+
+    public function testConstructorConfigureContainer()
+    {
+        $configureObject = $this->prophesize(ConfigureContainerInterface::class)->reveal();
+
+        $app = new Application([], $configureObject);
+
+        $class = new \ReflectionClass($app);
+        $propertyConfigureContainer = $class->getProperty('configureContainer');
+        $propertyConfigureContainer->setAccessible(true);
+        $configureObj = $propertyConfigureContainer->getValue($app);
+
+        $this->assertEquals($configureObject, $configureObj);
+        $this->assertEquals($configureObject, $app->getConfigureContainerObj());
+    }
+
+    public function testSetConfigureContainer()
+    {
+        $app = new Application([]);
+
+        $class = new \ReflectionClass($app);
+        $propertyConfigureContainer = $class->getProperty('configureContainer');
+        $propertyConfigureContainer->setAccessible(true);
+        $configureObj = $propertyConfigureContainer->getValue($app);
+
+        $this->assertInstanceOf(ConfigureContainerInterface::class, $configureObj);
+        $this->assertEquals($configureObj, $app->getConfigureContainerObj());
+
+        $newConfigureObj = $this->prophesize(ConfigureContainerInterface::class)->reveal();
+        $app->setConfigureContainerObj($newConfigureObj);
+
+        $this->assertEquals($newConfigureObj, $app->getConfigureContainerObj());
+    }
+
+    public function testConstructorSetContainer()
+    {
+        $container = $this->prophesize(ContainerInterface::class)->reveal();
+        $app = new Application($container);
+
+        $class = new \ReflectionClass($app);
+        $propertyContainer = $class->getProperty('container');
+        $propertyContainer->setAccessible(true);
+        $containerObj = $propertyContainer->getValue($app);
+
+        $this->assertInstanceOf(ContainerInterface::class, $containerObj);
+        $this->assertEquals($container, $containerObj);
+        $this->assertEquals($container, $app->getContainer());
+    }
+
+    public function testConstructorDefaultContainer()
+    {
+        $app = new Application([]);
+
+        $class = new \ReflectionClass($app);
+        $propertyContainer = $class->getProperty('container');
+        $propertyContainer->setAccessible(true);
+        $containerObj = $propertyContainer->getValue($app);
+
+        $this->assertInstanceOf(ContainerInterface::class, $containerObj);
+        $this->assertEquals($containerObj, $app->getContainer());
+    }
+
+    public function testConstructorDefaultConfigArray()
+    {
+        $app = new Application([]);
+
+        $class = new \ReflectionClass($app);
+        $propertyDefaultConfig = $class->getProperty('defaultConfig');
+        $propertyDefaultConfig->setAccessible(true);
+        $defaultConfig = $propertyDefaultConfig->getValue($app);
+
+        $configObj = $app->getContainer()->get('config');
+        $config = $configObj->getAll();
+
+        $this->assertEquals($defaultConfig, $config);
+    }
+
+    public function testConstructorConfigArray()
+    {
+        // change not all default options for test & add fixed options
+        $conf = [
+            'some option' => 'some value',
+            'error_reporting' => '1',
+            'display_errors' => '0',
+            'display_exceptions' => false,
+            'new_option1' => 'val1',
+            'new_option2' => 'val2'
         ];
+        $app = new Application($conf);
+
+        $class = new \ReflectionClass($app);
+        $propertyDefaultConfig = $class->getProperty('defaultConfig');
+        $propertyDefaultConfig->setAccessible(true);
+        $defaultConfig = $propertyDefaultConfig->getValue($app);
+
+        $configObj = $app->getContainer()->get('config');
+        $config = $configObj->getAll();
+
+        $this->assertEquals(array_merge($defaultConfig, $conf), $config);
     }
 
-    protected function getMyExceptionHandler()
+    public function testGetConfig()
     {
-        $file = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'MyErrorHandler.php';
-        require_once $file;
-        $class = 'Tlumx\Tests\Application\MyErrorHandler';
+        // change not all default options for test & add fixed options
+        $conf = [
+            'some option' => 'some value',
+            'error_reporting' => '0',
+            'display_errors' => '0',
+            'display_exceptions' => false,
+            'new_option1' => 'val1',
+            'new_option2' => 'val2'
+        ];
+        $app = new Application($conf);
 
-        return new $class();
-    }
+        $class = new \ReflectionClass($app);
+        $propertyDefaultConfig = $class->getProperty('defaultConfig');
+        $propertyDefaultConfig->setAccessible(true);
+        $defaultConfig = $propertyDefaultConfig->getValue($app);
 
-    protected function getMyNotFoundHandler()
-    {
-        $file = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'MyNotFoundHandler.php';
-        require_once $file;
-        $class = 'Tlumx\Tests\Application\MyNotFoundHandler';
+        $configObj = $app->getContainer()->get('config');
+        $config = $configObj->getAll();
 
-        return new $class();
-    }
-
-
-    public function testConfig()
-    {
-        $app = new Application(['a' => 123]);
-        $this->assertEquals(123, $app->getConfig('a'));
-        $this->assertTrue(is_array($app->getConfig()));
-        $app->setConfig('foo', 'baz');
-        $this->assertEquals('baz', $app->getConfig('foo'));
-        $app->setConfig(['asd' => 'some']);
-        $this->assertEquals('some', $app->getConfig('asd'));
-    }
-
-    public function testGetServiceProvider()
-    {
-        $app = new Application();
-        $this->assertInstanceOf('Tlumx\ServiceContainer\ServiceContainer', $app->getServiceProvider());
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testDefaultExceptionHandler()
-    {
-        $app = new Application($this->appConfig);
-        $app->setConfig('display_exceptions', false);
-        $app->run();
-
-        $body = "<h1>An error occurred</h1><h2>Internal Server Error</h2>";
-        $result = sprintf(
-            "<html><head><title>%s</title><style>body {font-family: Helvetica,Arial,sans-serif;font-size: 20px;line-height: 28px;padding:20px;}</style></head><body>%s</body></html>",
-            'Tlumx application: Internal Server Error',
-            $body
-        );
-
-        $this->expectOutputString($result);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testMyExceptionHandler()
-    {
-        $app = new Application($this->appConfig);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/', []);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
-
-        $this->expectOutputString("Error: Controller \"index\" not exist.");
+        $this->assertEquals($configObj, $app->getConfig());
+        $this->assertEquals('some value', $app->getConfig('some option'));
+        $this->assertNull($app->getConfig('no isset option'));
+        $this->assertEquals('default value', $app->getConfig('no isset option', 'default value'));
     }
 
     /**
@@ -127,10 +181,11 @@ class ApplicationTest extends \PHPUnit\Framework\TestCase
      */
     public function testErrorHandler()
     {
-        $app = new Application();
+        $app = new Application([]);
         error_reporting(-1);
         //$this->setExpectedException('ErrorException');
         $this->expectException(\ErrorException::class);
+        $this->expectExceptionMessage('my error');
         $app->errorHandler(1, 'my error', 'file', 20);
     }
 
@@ -139,355 +194,457 @@ class ApplicationTest extends \PHPUnit\Framework\TestCase
      */
     public function testErrorHandlerNoException()
     {
-        $app = new Application();
+        $app = new Application([]);
         error_reporting(0);
         $this->assertEquals(null, $app->errorHandler(1, 'my error', 'file', 20));
     }
 
-    /**
-     * @runInSeparateProcess
-     */
-    public function testBootstrapperClassNotFound()
+    public function testBootstrapClassNotFound()
     {
         $app = new Application([
             'bootstrappers' => [
-                'MyBootstrap'
+                'BootstrapClassNotFound'
             ]
         ]);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
+        $this->expectException(BootstrapperClassNotFoundException::class);
+        $this->expectExceptionMessage(sprintf('Bootstrapper class "%s" not found', 'BootstrapClassNotFound'));
 
-        $errMessage = "Error: Bootstrapper class \"MyBootstrap\" not found";
-        $this->expectOutputString($errMessage);
+        $class = new \ReflectionClass($app);
+        $methodBootstrap = $class->getMethod('bootstrap');
+        $methodBootstrap->setAccessible(true);
+        $methodBootstrap->invokeArgs($app, []);
     }
 
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidBootstrapClass()
+    public function testBootstrapClassNotExtendBootstrapper()
     {
         $app = new Application([
             'bootstrappers' => [
-                'Tlumx\Tests\MyNotFoundHandler'
+                'Tlumx\Tests\Application\Fixtures\BootstrapClassNotExtendBootstrapper'
             ]
         ]);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
+        $this->expectException(InvalidBootstrapperClassException::class);
+        $this->expectExceptionMessage(sprintf(
+            "Bootstrapper class \"%s\" must extend from Tlumx\\Application\\Bootstrapper",
+            'Tlumx\Tests\Application\Fixtures\BootstrapClassNotExtendBootstrapper'
+        ));
 
-        $errMessage = "Error: Bootstrapper class \"Tlumx\Tests\MyNotFoundHandler\" not found";
-        $this->expectOutputString($errMessage);
+        $class = new \ReflectionClass($app);
+        $methodBootstrap = $class->getMethod('bootstrap');
+        $methodBootstrap->setAccessible(true);
+        $methodBootstrap->invokeArgs($app, []);
     }
 
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testNoFoundRoute()
-    {
-        $app = new Application();
-        $app->getServiceProvider()->set('not_found_handler', $this->getMyNotFoundHandler());
-        $app->run();
-
-        $errMessage = "404";
-        $this->expectOutputString($errMessage);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testNoAllowedMethod()
+    public function testBootstrapSuccess()
     {
         $app = new Application([
+            'bootstrappers' => [
+                'Tlumx\Tests\Application\Fixtures\ABootstrapper',
+                'Tlumx\Tests\Application\Fixtures\BBootstrapper'
+            ],
+            'a' => 'value_a',
+            'b' => 'value_b',
+            'c' => [
+                'c1' => 'value_c1',
+                'c2' => 'value_c2',
+                'c3' => [
+                    'c3_1' => 'value_c3_1',
+                    'c3_2' => 'value_c3_3',
+                ]
+            ]
+        ]);
+
+        $class = new \ReflectionClass($app);
+        $methodBootstrap = $class->getMethod('bootstrap');
+        $methodBootstrap->setAccessible(true);
+        $methodBootstrap->invokeArgs($app, []);
+
+        // init()
+        $this->assertTrue($app->getContainer()->has('init_service'));
+        $this->assertEquals('init_service_value', $app->getContainer()->get('init_service'));
+
+        // getServiceConfig
+        $this->assertTrue($app->getContainer()->has('service1'));
+        $this->assertEquals('value1', $app->getContainer()->get('service1'));
+
+        // Bootstrapper not overide "main" config, can only add new options
+        $config = $app->getConfig();
+        $this->assertEquals([
+            'a' => 'value_a',
+            'b' => 'value_b',
+            'c' => [
+                'c1' => 'value_c1',
+                'c2' => 'value_c2',
+                'c3' => [
+                    'c3_1' => 'value_c3_1',
+                    'c3_2' => 'value_c3_3',
+                    'c3_3' => 'value_c3_3_from_b',
+                ]
+            ],
+            'd' => 'd_value',
+            'error_reporting' => '-1',
+            'display_errors' => '1',
+            'display_exceptions' => true,
+            'router_cache_enabled' => false,
+            'router_cache_file' => 'routes.php.cache',
+            'response_chunk_size' => 4096,
+            'bootstrappers' => [
+                'Tlumx\Tests\Application\Fixtures\ABootstrapper',
+                'Tlumx\Tests\Application\Fixtures\BBootstrapper'
+            ]
+        ], $config->getAll());
+
+        // testEvents
+        $em = $app->getContainer()->get('event_manager');
+        $event = new ApplicationEvent(ApplicationEvent::EVENT_POST_BOOTSTRAP);
+        $event->setContainer($app->getContainer());
+        $this->assertEquals('postBootstrap', $em->trigger($event));
+        $event->setName(ApplicationEvent::EVENT_PRE_ROUTING);
+        $this->assertEquals('preRouting', $em->trigger($event));
+        $event->setName(ApplicationEvent::EVENT_POST_ROUTING);
+        $this->assertEquals('postRouting', $em->trigger($event));
+        $event->setName(ApplicationEvent::EVENT_PRE_DISPATCH);
+        $this->assertEquals('preDispatch', $em->trigger($event));
+        $event->setName(ApplicationEvent::EVENT_POST_DISPATCH);
+        $this->assertEquals('postDispatch', $em->trigger($event));
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testSetErrorsRun()
+    {
+        $app = new Application([]);
+        $app->run(false);
+
+        $this->assertEquals('-1', ini_get('error_reporting'));
+        $this->assertEquals('1', ini_get('display_errors'));
+
+        $this->expectException(\ErrorException::class);
+        $original = unserialize('foo');
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testRunMustReturnResponse()
+    {
+        $app = new Application([]);
+        $response = $app->run(false);
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+    }
+
+    public function getController($container)
+    {
+        // Set templates
+        $tm = new TemplatesManager();
+        $layout = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'SomeModule' .
+                DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'main.phtml';
+        $layout2 = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'SomeModule' .
+                DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'main2.phtml';
+        $tm->setTemplateMap([
+            'main' => $layout,
+            'main2' => $layout2
+        ]);
+        $tm->addTemplatePath('foo', __DIR__ . DIRECTORY_SEPARATOR . 'resources' .
+            DIRECTORY_SEPARATOR . 'SomeModule' . DIRECTORY_SEPARATOR . 'views' .
+            DIRECTORY_SEPARATOR . 'foo');
+        $container->set('templates_manager', $tm);
+
+        $config = $container->get('config');
+        $config->set('layout', 'main');
+
+        // Create controller object
+        $fileController = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR .
+            'SomeModule' . DIRECTORY_SEPARATOR . 'controllers' . DIRECTORY_SEPARATOR .
+            'FooController.php';
+        require_once $fileController;
+        $class = 'Foo\\FooController';
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testRunSuccess()
+    {
+        $_SERVER = [
+            'SERVER_NAME'  => 'localhost',
+            'SCRIPT_NAME' => 'index.php'
+        ];
+        $app = new Application([
+            'bootstrappers' => [
+                'Tlumx\Tests\Application\Fixtures\ABootstrapper',
+                'Tlumx\Tests\Application\Fixtures\BBootstrapper'
+            ],
             'routes' => [
-                'index' => [
-                    'methods' => ['POST'],
+                'home' => [
+                    'methods' => 'GET',
                     'pattern' => '/',
                     'middlewares' => [],
-                    'handler' => []
-                ]
+                    'handler' => ['controller' => 'FooController', 'action' => 'gamma'],
+                ],
             ],
-        ]);
-        $app->getServiceProvider()->set('not_found_handler', $this->getMyNotFoundHandler());
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['POST'], '/', []);
-        $app->run();
-
-        $errMessage = "Methods: POST";
-        $this->expectOutputString($errMessage);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidRouteMiddlewares()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-        $app = new Application([
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => ['midd1', 'midd2'],
-                    'handler' => []
-                ]
-            ],
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', [], [], [ null ]);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
-
-        $errMessage = "Error: Middleware is not callable";
-        $this->expectOutputString($errMessage);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidRouteMiddlewareInvalidReturn()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-        $app = new Application([
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [function () {
-                    }],
-                    'handler' => []
-                ]
-            ],
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', [], [], [ function() {} ]);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
-
-        $errMessage = "Error: Middleware must return instance of \Psr\Http\Message\ResponseInterface";
-        $this->expectOutputString($errMessage);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidRouteResultInRequest()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-        $app = new Application([
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [ function ($req, $res, $next) {
-                        $req = $req->withoutAttribute('router_result');
-                        return $next($req, $res);
-                    } ],
-                    'handler' => []
-                ]
-            ],
-        ]);
-        /*$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', [], [], [ function($req, $res, $next) {
-            $req = $req->withoutAttribute('router_result');
-            return $next($req, $res);
-        } ]);*/
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
-
-        $errMessage = "Error: Controller \"index\" not exist.";
-        $this->expectOutputString($errMessage);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidControllerInRouteHandler()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-        $app = new Application([
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [],
-                    'handler' => ['controller' => false]
+            'service_container' => [
+                'factories' => [
+                    'FooController' => 'Foo\\FooController',
                 ]
             ]
         ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['controller' => false]);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
 
-        $errMessage = "Error: Invalid controller name in route handler";
-        $this->expectOutputString($errMessage);
-    }
+        $container = $app->getContainer();
+        $em = $app->getContainer()->get('event_manager');
+        $em->attach(ApplicationEvent::EVENT_POST_BOOTSTRAP, function (ApplicationEvent $e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_POST_BOOTSTRAP.'service', 'do1');
+        }, 10);
+        $em->attach(ApplicationEvent::EVENT_PRE_ROUTING, function ($e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_PRE_ROUTING.'service', 'do2');
+        }, 10);
+        $em->attach(ApplicationEvent::EVENT_POST_ROUTING, function ($e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_POST_ROUTING.'service', 'do3');
+        }, 10);
+        $em->attach(ApplicationEvent::EVENT_PRE_DISPATCH, function ($e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_PRE_DISPATCH.'service', 'do4');
+        }, 10);
+        $em->attach(ApplicationEvent::EVENT_POST_DISPATCH, function ($e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_POST_DISPATCH.'service', 'do5');
+        }, 10);
+        $this->getController($app->getContainer());
 
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidActionInRouteHandler()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-        $app = new Application([
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [],
-                    'handler' => ['action' => false]
-                ]
-            ]
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['action' => false]);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
-
-        $errMessage = "Error: Invalid action name in route handler";
-        $this->expectOutputString($errMessage);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidControllerClasNotExist()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-        $app = new Application([
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [],
-                    'handler' => []
-                ]
-            ]
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', []);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
-
-        $errMessage = "Error: Controller \"index\" not exist.";
-        $this->expectOutputString($errMessage);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidController()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-        $app = new Application([
-            'controllers' => [
-                'index' => __CLASS__
-            ],
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [],
-                    'handler' => []
-                ]
-            ]
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', []);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-        $app->run();
-
-        $errMessage = "Error: Controller \"Tlumx\Tests\Application\ApplicationTest\" is not an instance of Tlumx\Application\Controller.";
-        $this->expectOutputString($errMessage);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testRun()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-
-        require __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'FooController.php';
-
-        $app = new Application([
-            'controllers' => [
-                'foo' => 'Foo\FooController'
-            ],
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [],
-                    'handler' => ['controller' => 'foo', 'action' => 'about']
-                ]
-            ]
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['controller' => 'foo', 'action'=>'about']);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-
-        $response = $app->run();
-        $this->assertInstanceOf('Psr\Http\Message\ResponseInterface', $response);
-
-        $message = "about";
-        $this->expectOutputString($message);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testRunNotSend()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-
-        require __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'FooController.php';
-
-        $app = new Application([
-            'controllers' => [
-                'foo' => 'Foo\FooController'
-            ],
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [],
-                    'handler' => ['controller' => 'foo', 'action' => 'about']
-                ]
-            ]
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['controller' => 'foo', 'action'=>'about']);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-
+        // run
         $response = $app->run(false);
-        $this->assertEquals('about', $response->getBody());
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $body = $response->getBody();
+        $body->rewind();
+        $this->assertEquals('gamma', $body->getContents());
+
+        // testEvents - all event was tregged
+        $this->assertEquals('do1', $container->get(ApplicationEvent::EVENT_POST_BOOTSTRAP.'service'));
+        $this->assertEquals('do2', $container->get(ApplicationEvent::EVENT_PRE_ROUTING.'service'));
+        $this->assertEquals('do3', $container->get(ApplicationEvent::EVENT_POST_ROUTING.'service'));
+        $this->assertEquals('do4', $container->get(ApplicationEvent::EVENT_PRE_DISPATCH.'service'));
+        $this->assertEquals('do5', $container->get(ApplicationEvent::EVENT_POST_DISPATCH.'service'));
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testRunWithoutOriginalDispatchMiddleware()
+    {
+        $_SERVER = [
+            'SERVER_NAME'  => 'localhost',
+            'SCRIPT_NAME' => 'index.php'
+        ];
+        $app = new Application([
+            'bootstrappers' => [
+                'Tlumx\Tests\Application\Fixtures\ABootstrapper',
+                'Tlumx\Tests\Application\Fixtures\BBootstrapper'
+            ],
+            'routes' => [
+                'home' => [
+                    'methods' => 'GET',
+                    'pattern' => '/',
+                    'middlewares' => [],
+                    'handler' => ['controller' => 'FooController', 'action' => 'gamma'],
+                ],
+            ],
+            'service_container' => [
+                'factories' => [
+                    'FooController' => 'Foo\\FooController',
+                ]
+            ]
+        ]);
+
+        $container = $app->getContainer();
+        $em = $app->getContainer()->get('event_manager');
+        $em->attach(ApplicationEvent::EVENT_POST_BOOTSTRAP, function (ApplicationEvent $e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_POST_BOOTSTRAP.'service', 'do1');
+        }, 10);
+        $em->attach(ApplicationEvent::EVENT_PRE_ROUTING, function ($e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_PRE_ROUTING.'service', 'do2');
+        }, 10);
+        $em->attach(ApplicationEvent::EVENT_POST_ROUTING, function ($e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_POST_ROUTING.'service', 'do3');
+        }, 10);
+        $em->attach(ApplicationEvent::EVENT_PRE_DISPATCH, function ($e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_PRE_DISPATCH.'service', 'do4');
+        }, 10);
+        $em->attach(ApplicationEvent::EVENT_POST_DISPATCH, function ($e) {
+            $e->getContainer()->set(ApplicationEvent::EVENT_POST_DISPATCH.'service', 'do5');
+        }, 10);
+
+        $this->getController($app->getContainer());
+
+        $container->register(
+            'DispatchMiddleware',
+            "\Tlumx\Tests\Application\Fixtures\InvalidDispatchMiddleware"
+        );
+
+        $fileNotFoundHandler = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR .
+            'MyNotFoundHandler.php';
+        require_once $fileNotFoundHandler;
+        $classNotFoundHandler = new \Tlumx\Tests\Application\MyNotFoundHandler();
+        $container->set('not_found_handler', $classNotFoundHandler);
+
+        // run
+        $response = $app->run(false);
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $body = $response->getBody();
+        $body->rewind();
+        $this->assertEquals('404', $body->getContents());
+
+        // testEvents - all event was tregged
+        $this->assertEquals('do1', $container->get(ApplicationEvent::EVENT_POST_BOOTSTRAP.'service'));
+        $this->assertEquals('do2', $container->get(ApplicationEvent::EVENT_PRE_ROUTING.'service'));
+        $this->assertEquals('do3', $container->get(ApplicationEvent::EVENT_POST_ROUTING.'service'));
+        $this->assertEquals('do', $container->get('InvalidDispatchMiddlewareService'));
+        $this->assertFalse($container->has(ApplicationEvent::EVENT_PRE_DISPATCH.'service'));
+        $this->assertFalse($container->has(ApplicationEvent::EVENT_POST_DISPATCH.'service'));
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testRunCatchBlock()
+    {
+        $app = new Application([
+            'bootstrappers' => [
+                'Tlumx\Tests\Application\Fixtures\ABootstrapper',
+                'Tlumx\Tests\Application\Fixtures\BBootstrapper'
+            ]
+        ]);
+
+        $em = $app->getContainer()->get('event_manager');
+        $em->attach(ApplicationEvent::EVENT_POST_BOOTSTRAP, function (ApplicationEvent $e) {
+            // check to use "ob_end_clean()" in catch block
+            $notObFlush = new \Tlumx\Tests\Application\Fixtures\NotObFlush();
+
+            $e->getContainer()->set(ApplicationEvent::EVENT_POST_BOOTSTRAP.'service', 'do1');
+            throw new \Exception("This is my test exception");
+        }, 10);
+
+        $fileExceptionHandler = __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR .
+            'MyErrorHandler.php';
+        require_once $fileExceptionHandler;
+        $classErrorHandler = new \Tlumx\Tests\Application\MyErrorHandler();
+        $app->getContainer()->set('exception_handler', $classErrorHandler);
+
+        // run
+        $response = $app->run(false);
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $body = $response->getBody();
+        $body->rewind();
+        $this->assertEquals('Error: This is my test exception', $body->getContents());
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testRunAndSend()
+    {
+        $_SERVER = [
+            'SERVER_NAME'  => 'localhost',
+            'SCRIPT_NAME' => 'index.php'
+        ];
+        $app = new Application([
+            'bootstrappers' => [
+                'Tlumx\Tests\Application\Fixtures\ABootstrapper',
+                'Tlumx\Tests\Application\Fixtures\BBootstrapper'
+            ],
+            'routes' => [
+                'home' => [
+                    'methods' => 'GET',
+                    'pattern' => '/',
+                    'middlewares' => [],
+                    'handler' => ['controller' => 'FooController', 'action' => 'gamma'],
+                ],
+            ],
+            'service_container' => [
+                'factories' => [
+                    'FooController' => 'Foo\\FooController',
+                ]
+            ]
+        ]);
+        $this->getController($app->getContainer());
+
+        // run
+        $app->run();
+        $this->expectOutputString('gamma');
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testSendResponse()
+    {
+        $response = new Response();
+        $response = $response->withStatus(500);
+        $response->getBody()->write('Error');
+        $response->withHeader('Content-Type', 'text/html');
+
+        $app = new Application([]);
+
+        $app->sendResponse($response);
+        $this->assertEquals(500, http_response_code());
+
+        $this->expectOutputString('Error');
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testSendResponseWithNoContentLength()
+    {
+        $response = new Response();
+        $response = $response->withStatus(200);
+        $response->getBody()->write('some content');
+        $size = (string) $response->getBody()->getSize();
+
+        $app = new Application([]);
+        $app->sendResponse($response);
+
+        $this->assertEquals(200, http_response_code());
+        $this->expectOutputString('some content');
+        $this->assertContains(
+            'Content-Length: ' . $size,
+            xdebug_get_headers()
+        );
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testSendResponseWithSetCookieHeaders()
+    {
+        $response = new Response();
+        $response = $response->withStatus(200);
+        $response->getBody()->write('some content');
+        $response = $response->withHeader('Content-Type', 'text/html');
+        $response = $response->withHeader('Set-Cookie', 'foo=bar');
+        $response = $response->withAddedHeader('Set-Cookie', 'a=b');
+
+        $app = new Application([]);
+        $app->sendResponse($response);
+
+        $this->assertEquals(200, http_response_code());
+        $this->expectOutputString('some content');
+        $this->assertContains('Content-Length: 12', xdebug_get_headers());
+        $this->assertContains('Set-Cookie: foo=bar', xdebug_get_headers());
+        $this->assertContains('Set-Cookie: a=b', xdebug_get_headers());
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testSendResponseWhenHeadersSent()
+    {
+        require __DIR__ . '/functions/headers_sent_function_helper.php';
+
+        $response = new Response();
+        $response = $response->withStatus(500);
+        $response->getBody()->write('Error');
+        $response->withHeader('Content-Type', 'text/html');
+
+        $app = new Application([]);
+        $app->sendResponse($response);
 
         $this->expectOutputString('');
     }
@@ -495,346 +652,20 @@ class ApplicationTest extends \PHPUnit\Framework\TestCase
     /**
      * @runInSeparateProcess
      */
-    public function testCheckEvents()
+    public function testSendResponseBreakOnNotCconnectionNormal()
     {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
+        require __DIR__ . '/functions/connection_status_function_helper.php';
 
-        require __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'FooController.php';
+        $response = new Response();
+        $response = $response->withStatus(500);
+        $response->getBody()->write('Error');
+        $response->withHeader('Content-Type', 'text/html');
 
-        $app = new Application([
-            'controllers' => [
-                'foo' => 'Foo\FooController'
-            ],
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [],
-                    'handler' => ['controller' => 'foo', 'action' => 'about']
-                ]
-            ]
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['controller' => 'foo', 'action'=>'about']);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
+        $app = new Application([]);
+        $config = $app->getConfig();
+        $config->set('response_chunk_size', 4);
+        $app->sendResponse($response);
 
-        $events = [];
-        $app->getServiceProvider()->getEventManager()->attach(Application::EVENT_POST_BOOTSTRAP, function ($event) use (&$events) {
-            $events[] = Application::EVENT_POST_BOOTSTRAP;
-        });
-        $app->getServiceProvider()->getEventManager()->attach(Application::EVENT_PRE_ROUTING, function ($event) use (&$events) {
-            $events[] = Application::EVENT_PRE_ROUTING;
-        });
-        $app->getServiceProvider()->getEventManager()->attach(Application::EVENT_POST_ROUTING, function ($event) use (&$events) {
-            $events[] = Application::EVENT_POST_ROUTING;
-        });
-        $app->getServiceProvider()->getEventManager()->attach(Application::EVENT_PRE_DISPATCH, function ($event) use (&$events) {
-            $events[] = Application::EVENT_PRE_DISPATCH;
-        });
-        $app->getServiceProvider()->getEventManager()->attach(Application::EVENT_POST_DISPATCH, function ($event) use (&$events) {
-            $events[] = Application::EVENT_POST_DISPATCH;
-        });
-
-        $app->run(false);
-        $e = [
-            Application::EVENT_POST_BOOTSTRAP,
-            Application::EVENT_PRE_ROUTING,
-            Application::EVENT_POST_ROUTING,
-            Application::EVENT_PRE_DISPATCH,
-            Application::EVENT_POST_DISPATCH
-        ];
-
-        foreach ($e as $k => $value) {
-            $this->assertEquals($events[$k], $value);
-        }
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testMiddlewares()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-
-        require __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'FooController.php';
-
-        $app = new Application([
-            'controllers' => [
-                'foo' => 'Foo\FooController'
-            ],
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [
-                        function ($req, $res, $next) {
-                            $res->getBody()->write('Rm1Start');
-                            $res = $next($req, $res);
-                            $res->getBody()->write('Rm1End');
-                            return $res;
-                        },
-                        function ($req, $res, $next) {
-                            $res->getBody()->write('Rm2Start');
-                            $res = $next($req, $res);
-                            $res->getBody()->write('Em2End');
-                            return $res;
-                        }
-                    ],
-                    'handler' => ['controller' => 'foo', 'action' => 'about']
-                ]
-            ]
-        ]);
-        /*$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['controller' => 'foo', 'action'=>'about'], [], [
-                    function ($req, $res, $next) {
-                        $res->getBody()->write('Rm1Start');
-                        $res = $next($req, $res);
-                        $res->getBody()->write('Rm1End');
-                        return $res;
-                    },
-                    function ($req, $res, $next) {
-                        $res->write('Rm2Start');
-                        $res = $next($req, $res);
-                        $res->write('Em2End');
-                        return $res;
-                    },
-        ]);*/
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-
-        $app->add(function ($req, $res, $next) {
-            $res->getBody()->write('AM1Start');
-            $res = $next($req, $res);
-            $res->getBody()->write('AM1End');
-            return $res;
-        });
-        $app->add(function ($req, $res, $next) {
-            $res->getBody()->write('AM2Start');
-            $res = $next($req, $res);
-            $res->getBody()->write('AM2End');
-            return $res;
-        });
-        $app->run();
-
-        $this->expectOutputString('AM1StartAM2StartRm1StartRm2StartaboutEm2EndRm1EndAM2EndAM1End');
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidAppMiddlewares()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-
-        require __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'FooController.php';
-
-        $app = new Application([
-            'controllers' => [
-                'foo' => 'Foo\FooController'
-            ],
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [
-                        function ($req, $res, $next) {
-                            $res->getBody()->write('Rm1Start');
-                            $res = $next($req, $res);
-                            $res->getBody()->write('Rm1End');
-                            return $res;
-                        },
-                        function ($req, $res, $next) {
-                            $res->getBody()->write('Rm2Start');
-                            $res = $next($req, $res);
-                            $res->getBody()->write('Em2End');
-                            return $res;
-                        },
-                    ],
-                    'handler' => ['controller' => 'foo', 'action' => 'about']
-                ]
-            ]
-        ]);
-        /*$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['controller' => 'foo', 'action'=>'about'], [], [
-                    function ($req, $res, $next) {
-                        $res->write('Rm1Start');
-                        $res = $next($req, $res);
-                        $res->write('Rm1End');
-                        return $res;
-                    },
-                    function ($req, $res, $next) {
-                        $res->write('Rm2Start');
-                        $res = $next($req, $res);
-                        $res->write('Em2End');
-                        return $res;
-                    },
-        ]);*/
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-
-        $app->add(function ($req, $res, $next) {
-            $res->getBody()->write('AM1Start');
-            $res = $next($req, $res);
-            $res->getBody()->write('AM1End');
-        });
-        $app->add(function ($req, $res, $next) {
-            $res->getBody()->write('AM2Start');
-            $res = $next($req, $res);
-            $res->getBody()->write('AM2End');
-        });
-        $app->run();
-
-
-        $this->expectOutputString('Error: Middleware must return instance of \Psr\Http\Message\ResponseInterface');
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testAddMiddlewareFromService()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-
-        require __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'FooController.php';
-
-        $app = new Application([
-            'controllers' => [
-                'foo' => 'Foo\FooController'
-            ],
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [
-
-                    ],
-                    'handler' => ['controller' => 'foo', 'action' => 'about']
-                ]
-            ]
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['controller' => 'foo', 'action'=>'about']);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-
-        $app->getServiceProvider()->set('midd1', function ($req, $res, $next) {
-            $res->getBody()->write('AM1Start');
-            $res = $next($req, $res);
-            $res->getBody()->write('AM1End');
-            return $res;
-        });
-        $app->add('midd1');
-        $app->run();
-
-
-        $this->expectOutputString('AM1StartaboutAM1End');
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidMiddlewareFromService()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-
-        require __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'FooController.php';
-
-        $app = new Application([
-            'controllers' => [
-                'foo' => 'Foo\FooController'
-            ],
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [
-
-                    ],
-                    'handler' => ['controller' => 'foo', 'action' => 'about']
-                ]
-            ]
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['controller' => 'foo', 'action'=>'about']);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-
-        $app->getServiceProvider()->set('midd1', 'invalid');
-        $app->add('midd1');
-        $app->run();
-
-
-        $this->expectOutputString('Error: Middleware "midd1" is not invokable');
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidAddMiddlewareInNotCallable()
-    {
-        $app = new Application();
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Middleware is not callable');
-        $app->add([]);
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testInvalidAddMiddlewaresWhenCall()
-    {
-        $_SERVER = [
-            'REQUEST_METHOD'  => 'GET',
-            'HTTP_HOST'     => 'site.com',
-            'REQUEST_URI'   => '/some-router',
-        ];
-
-        require __DIR__ . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'FooController.php';
-
-        $app = new Application([
-            'controllers' => [
-                'foo' => 'Foo\FooController'
-            ],
-            'routes' => [
-                'index' => [
-                    'methods' => ['GET'],
-                    'pattern' => '/some-router',
-                    'middlewares' => [
-
-                    ],
-                    'handler' => ['controller' => 'foo', 'action' => 'about']
-                ]
-            ]
-        ]);
-        //$app->getServiceProvider()->getRouter()->setRoute('index', ['GET'], '/some-router', ['controller' => 'foo', 'action'=>'about']);
-        $app->getServiceProvider()->set('exception_handler', $this->getMyExceptionHandler());
-
-        $app->add(function ($req, $res, $next) {
-            $res->getBody()->write('AM1Start');
-            $res = $next($req, $res);
-            $res->getBody()->write('AM1End');
-            return $res;
-        });
-        $app->add(function ($req, $res, $next) use ($app) {
-            $app->add(function ($req, $res, $next) {
-                return $next($req, $res);
-            });
-            $res = $next($req, $res);
-        });
-        $app->run();
-
-
-        $this->expectOutputString('Error: Middleware can’t be added');
+        $this->expectOutputString('Erro');
     }
 }
