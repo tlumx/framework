@@ -11,7 +11,6 @@ namespace Tlumx\Tests\Application;
 
 use Tlumx\Application\Handler\DefaultExceptionHandler;
 use Tlumx\Application\DefaultContainerFactory;
-use Tlumx\ServiceContainer\ServiceContainer;
 
 class DefaultExceptionHandlerTest extends \PHPUnit\Framework\TestCase
 {

@@ -22,7 +22,7 @@ use Tlumx\Router\Result as RouteResult;
 class Controller implements RequestHandlerInterface, FactoryInterface
 {
     /**
-     * @var \Psr\Container\ContainerInterface
+     * @var ContainerInterface
      */
     private $container;
 
@@ -54,7 +54,7 @@ class Controller implements RequestHandlerInterface, FactoryInterface
     /**
      * Get application container
      *
-     * @return \Psr\Container\ContainerInterface
+     * @return ContainerInterface
      */
     public function getContainer()
     {
@@ -132,11 +132,11 @@ class Controller implements RequestHandlerInterface, FactoryInterface
     }
 
     /**
-    * Create an service object (from container).
-    *
-    * @param ContainerInterface $container
-    * @return $object Service (this)
-    */
+     * Create an service object (from container).
+     *
+     * @param ContainerInterface $container
+     * @return $object Service (this)
+     */
     public function __invoke(ContainerInterface $container)
     {
         $this->container = $container;
@@ -148,13 +148,16 @@ class Controller implements RequestHandlerInterface, FactoryInterface
      *
      * @param ServerRequestInterface $request
      * @return ResponseInterface
-     * @throws \RuntimeException
+     * @throws Exception\RouterResultNotFoundException
+     * @throws Exception\ActionNotFoundException
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $routeResult = $request->getAttribute(RouteResult::class, false);
         if (! $routeResult || ! $routeResult->isSuccess()) {
-            throw new \RuntimeException("Must be a valid \"Tlumx\Router\Result\" objrct in the request attriute");
+            throw new Exception\RouterResultNotFoundException(
+                "Must be a valid \"Tlumx\Router\Result\" objrct in the request attriute"
+            );
         }
 
         $handler = $routeResult->getRouteHandler();
@@ -162,7 +165,7 @@ class Controller implements RequestHandlerInterface, FactoryInterface
         $this->action = isset($handler['action']) ? $handler['action'] : 'index';
         $action = $this->action . 'Action';
         if (!method_exists($this, $action)) {
-            throw new \RuntimeException(sprintf('Action "%s" not found.', $this->action));
+            throw new Exception\ActionNotFoundException(sprintf('Action "%s" not found.', $this->action));
         }
 
         $layout = $this->getContainer()->get('config')->get('layout');

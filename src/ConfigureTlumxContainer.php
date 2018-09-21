@@ -9,25 +9,24 @@
  */
 namespace Tlumx\Application;
 
-use Tlumx\Application\ConfigureContainerInterface;
 use Psr\Container\ContainerInterface;
 use Tlumx\ServiceContainer\ServiceContainer;
 
 /**
-* Class for configuration Tlumx\ServiceContaine\ServiceContainer
-*/
+ * Class for configuration Tlumx\ServiceContaine\ServiceContainer.
+ */
 class ConfigureTlumxContainer implements ConfigureContainerInterface
 {
     /**
-    * Configure given Psr\Container\ContainerInterface
-    *
-    * @param Psr\Container\ContainerInterface $container
-    * @param array $config
-    * @return void
-    */
+     * Configure given Psr\Container\ContainerInterface
+     *
+     * @param ContainerInterface $container
+     * @param array $config
+     * @return void
+     */
     public function configureContainer(ContainerInterface $container, array $config = []) : void
     {
-        if (!($container instanceof \Tlumx\ServiceContainer\ServiceContainer)) {
+        if (!($container instanceof ServiceContainer)) {
             return;
         }
 
@@ -62,13 +61,13 @@ class ConfigureTlumxContainer implements ConfigureContainerInterface
     }
 
     /**
-    * Check if service is shared.
-    * (it is true by default)
-    *
-    * @param array serviceContainerConfig
-    * @param string serviceName
-    * @return bool
-    */
+     * Check if service is shared.
+     * (it is true by default)
+     *
+     * @param array serviceContainerConfig
+     * @param string serviceName
+     * @return bool
+     */
     private function isShared(array $serviceContainerConfig, string $serviceName)
     {
         $sharedConfig = isset($serviceContainerConfig['shared']) ? $serviceContainerConfig['shared'] : [];

@@ -10,7 +10,6 @@
 namespace Tlumx\Application;
 
 use Psr\Container\ContainerInterface;
-use Tlumx\Application\ConfigureContainerInterface;
 use Tlumx\Application\ApplicationEvent as AppEvent;
 
 /**
@@ -19,20 +18,20 @@ use Tlumx\Application\ApplicationEvent as AppEvent;
 class Bootstrapper
 {
     /**
-     * @var \Psr\Container\ContainerInterface
+     * @var ContainerInterface
      */
     private $container;
 
     /**
-    * @var \Tlumx\Application\ConfigureContainerInterface
-    */
+     * @var ConfigureContainerInterface
+     */
     private $configure;
 
     /**
      * Constructor
      *
-     * @param \Psr\Container\ContainerInterface $container
-     * @var \Tlumx\Application\ConfigureContainerInterface $configure
+     * @param ContainerInterface $container
+     * @var ConfigureContainerInterface $configure
      */
     public function __construct(ContainerInterface $container, ConfigureContainerInterface $configure)
     {
@@ -45,7 +44,7 @@ class Bootstrapper
     /**
      * Get container
      *
-     * @return \Psr\Container\ContainerInterface
+     * @return ContainerInterface
      */
     public function getContainer()
     {
@@ -53,10 +52,10 @@ class Bootstrapper
     }
 
     /**
-    * Get ConfigureContainer object
-    *
-    * @return ConfigureContainerInterface
-    */
+     * Get ConfigureContainer object
+     *
+     * @return ConfigureContainerInterface
+     */
     public function getConfigureContainerObj()
     {
         return $this->configure;
@@ -64,6 +63,8 @@ class Bootstrapper
 
     /**
      * do Bootstrapper
+     *
+     * @throws Exception\InvalidBootstrapperClassException
      */
     private function run()
     {
@@ -99,32 +100,32 @@ class Bootstrapper
         }
 
         if (method_exists($this, 'postBootstrap')) {
-            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_POST_BOOTSTRAP, function ($e) {
-                return $this->postBootstrap();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_POST_BOOTSTRAP, function (AppEvent $e) {
+                return $this->postBootstrap($e);
             });
         }
 
         if (method_exists($this, 'preRouting')) {
-            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_PRE_ROUTING, function ($e) {
-                return $this->preRouting();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_PRE_ROUTING, function (AppEvent $e) {
+                return $this->preRouting($e);
             });
         }
 
         if (method_exists($this, 'postRouting')) {
-            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_POST_ROUTING, function ($e) {
-                return $this->postRouting();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_POST_ROUTING, function (AppEvent $e) {
+                return $this->postRouting($e);
             });
         }
 
         if (method_exists($this, 'preDispatch')) {
-            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_PRE_DISPATCH, function ($e) {
-                return $this->preDispatch();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_PRE_DISPATCH, function (AppEvent $e) {
+                return $this->preDispatch($e);
             });
         }
 
         if (method_exists($this, 'postDispatch')) {
-            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_POST_DISPATCH, function ($e) {
-                return $this->postDispatch();
+            $this->getContainer()->get('event_manager')->attach(AppEvent::EVENT_POST_DISPATCH, function (AppEvent $e) {
+                return $this->postDispatch($e);
             });
         }
     }

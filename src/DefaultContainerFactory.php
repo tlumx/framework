@@ -27,21 +27,23 @@ use Tlumx\Application\Handler\ExceptionHandlerInterface;
 use Tlumx\Application\Handler\DefaultExceptionHandler;
 use Tlumx\Application\Handler\NotFoundHandlerInterface;
 use Tlumx\Application\Handler\DefaultNotFoundHandler;
+use Tlumx\Application\Middleware\RouteMiddleware;
+use Tlumx\Application\Middleware\DispatchMiddleware;
 
 /**
-* Class for creation and configuration Psr Container (Tlumx\ServiceContaine\ServiceContainer)
-*/
+ * Class for creation and configuration Psr Container (Tlumx\ServiceContaine\ServiceContainer).
+ */
 class DefaultContainerFactory
 {
     /**
-    * Create Psr\Container\ContainerInterface and configure it
-    * (Tlumx ServiceContainer)
-    *
-    * @param array $config
-    * @param Tlumx\Application\ConfigureTlumxContainer $configurationObj
-    * @return Psr\Container\ContainerInterface
-    */
-    public function create(array $config, ConfigureTlumxContainer $configureObj = null) : ContainerInterface
+     * Create Psr\Container\ContainerInterface and configure it
+     * (Tlumx ServiceContainer)
+     *
+     * @param array $config
+     * @param ConfigureContainerInterface $configurationObj
+     * @return ContainerInterface
+     */
+    public function create(array $config, ConfigureContainerInterface $configureObj = null) : ContainerInterface
     {
         $container = new ServiceContainer();
 
@@ -60,15 +62,17 @@ class DefaultContainerFactory
         $this->addTemplatesManager($container);
         $this->addExceptionHandler($container);
         $this->addNotFoundHandler($container);
+        $this->addRouteMiddleware($container);
+        $this->addDispatchMiddleware($container);
 
         return $container;
     }
 
     /**
-    * Add 'request' service (if it not exist) and set 'ServerRequestInterface::class' alias
-    *
-    * @param ContainerInterface $container
-    */
+     * Add 'request' service (if it not exist) and set 'ServerRequestInterface::class' alias
+     *
+     * @param ContainerInterface $container
+     */
     protected function addRequest(ContainerInterface $container)
     {
         if (!$container->has('request')) {
@@ -83,10 +87,10 @@ class DefaultContainerFactory
     }
 
     /**
-    * Add 'response' service (if it not exist) and set 'ResponseInterface::class' alias
-    *
-    * @param ContainerInterface $container
-    */
+     * Add 'response' service (if it not exist) and set 'ResponseInterface::class' alias
+     *
+     * @param ContainerInterface $container
+     */
     protected function addResponse(ContainerInterface $container)
     {
         if (!$container->has('response')) {
@@ -101,10 +105,10 @@ class DefaultContainerFactory
     }
 
     /**
-    * Add 'router' service (if it not exist) and set 'RouterInterface::class' alias
-    *
-    * @param ContainerInterface $container
-    */
+     * Add 'router' service (if it not exist) and set 'RouterInterface::class' alias
+     *
+     * @param ContainerInterface $container
+     */
     protected function addRouter(ContainerInterface $container)
     {
         if (!$container->has('router')) {
@@ -124,10 +128,11 @@ class DefaultContainerFactory
     }
 
     /**
-    * Add 'route_definition_callback' service (use in 'router' service)
-    *
-    * @param ContainerInterface $container
-    */
+     * Add 'route_definition_callback' service (use in 'router' service)
+     *
+     * @param ContainerInterface $container
+     * @throws Exception\InvalidRouterConfigurationException
+     */
     protected function getRouteDefinitionCallback(ContainerInterface $container)
     {
         $container->register('route_definition_callback', function ($container) {
@@ -138,7 +143,7 @@ class DefaultContainerFactory
             return function (RouteCollector $r) use ($routes, $groups) {
                 foreach ($routes as $name => $route) {
                     if (!is_array($route)) {
-                        throw new \LogicException(sprintf(
+                        throw new Exception\InvalidRouterConfigurationException(sprintf(
                             'Invalid configuration for route "%s": it must by in array.',
                             $name
                         ));
@@ -147,7 +152,7 @@ class DefaultContainerFactory
                     $methods = isset($route['methods']) ? (array) $route['methods'] : ['GET'];
 
                     if (!isset($route['pattern'])) {
-                        throw new \LogicException(sprintf(
+                        throw new Exception\InvalidRouterConfigurationException(sprintf(
                             'Invalid configuration for route "%s": not isset route pattern.',
                             $name
                         ));
@@ -156,7 +161,7 @@ class DefaultContainerFactory
                     $middlewares = (!isset($route['middlewares'])) ? [] : (array) $route['middlewares'];
 
                     if (!isset($route['handler'])) {
-                        throw new \LogicException(sprintf(
+                        throw new Exception\InvalidRouterConfigurationException(sprintf(
                             'Invalid configuration for route "%s": not isset route handler.',
                             $name
                         ));
@@ -180,7 +185,7 @@ class DefaultContainerFactory
 
                 foreach ($groups as $name => $group) {
                     if (!is_array($group)) {
-                        throw new \LogicException(sprintf(
+                        throw new Exception\InvalidRouterConfigurationException(sprintf(
                             'Invalid configuration for route group "%s": it must by in array.',
                             $name
                         ));
@@ -201,10 +206,10 @@ class DefaultContainerFactory
     }
 
     /**
-    * Add 'event_manager' service (if it not exist) and set 'EventManagerInterface::class' alias
-    *
-    * @param ContainerInterface $container
-    */
+     * Add 'event_manager' service (if it not exist) and set 'EventManagerInterface::class' alias
+     *
+     * @param ContainerInterface $container
+     */
     protected function addEventManager(ContainerInterface $container)
     {
         if (!$container->has('event_manager')) {
@@ -234,10 +239,10 @@ class DefaultContainerFactory
     }
 
     /**
-    * Add 'view' service (if it not exist) and set 'ViewInterface::class' alias
-    *
-    * @param ContainerInterface $container
-    */
+     * Add 'view' service (if it not exist) and set 'ViewInterface::class' alias
+     *
+     * @param ContainerInterface $container
+     */
     protected function addView(ContainerInterface $container)
     {
         if (!$container->has('view')) {
@@ -252,10 +257,10 @@ class DefaultContainerFactory
     }
 
     /**
-    * Add 'templates_manager' service (if it not exist) and set 'TemplatesManager::class' alias
-    *
-    * @param ContainerInterface $container
-    */
+     * Add 'templates_manager' service (if it not exist) and set 'TemplatesManager::class' alias
+     *
+     * @param ContainerInterface $container
+     */
     protected function addTemplatesManager(ContainerInterface $container)
     {
         if (!$container->has('templates_manager')) {
@@ -280,10 +285,10 @@ class DefaultContainerFactory
     }
 
     /**
-    * Add 'exception_handler' service (if it not exist) and set 'ExceptionHandlerInterface::class' alias
-    *
-    * @param ContainerInterface $container
-    */
+     * Add 'exception_handler' service (if it not exist) and set 'ExceptionHandlerInterface::class' alias
+     *
+     * @param ContainerInterface $container
+     */
     protected function addExceptionHandler(ContainerInterface $container)
     {
         if (!$container->has('exception_handler')) {
@@ -298,10 +303,10 @@ class DefaultContainerFactory
     }
 
     /**
-    * Add 'not_found_handler' service (if it not exist) and set 'NotFoundHandlerInterface::class' alias
-    *
-    * @param ContainerInterface $container
-    */
+     * Add 'not_found_handler' service (if it not exist) and set 'NotFoundHandlerInterface::class' alias
+     *
+     * @param ContainerInterface $container
+     */
     protected function addNotFoundHandler(ContainerInterface $container)
     {
         if (!$container->has('not_found_handler')) {
@@ -312,6 +317,34 @@ class DefaultContainerFactory
 
         if (!$container->hasAlias(NotFoundHandlerInterface::class)) {
             $container->setAlias(NotFoundHandlerInterface::class, 'not_found_handler');
+        }
+    }
+
+    /**
+     * Add 'RouteMiddleware' service (if it not exist)
+     *
+     * @param ContainerInterface $container
+     */
+    protected function addRouteMiddleware(ContainerInterface $container)
+    {
+        if (!$container->has('RouteMiddleware')) {
+            $container->register('RouteMiddleware', function ($container) {
+                return new RouteMiddleware($container);
+            });
+        }
+    }
+
+    /**
+     * Add 'DispatchMiddleware' service (if it not exist)
+     *
+     * @param ContainerInterface $container
+     */
+    protected function addDispatchMiddleware(ContainerInterface $container)
+    {
+        if (!$container->has('DispatchMiddleware')) {
+            $container->register('DispatchMiddleware', function ($container) {
+                return new DispatchMiddleware($container);
+            });
         }
     }
 }

@@ -7,8 +7,8 @@
  * @copyright Copyright (c) 2016-2018 Yaroslav Kharitonchuk
  * @license   https://github.com/tlumx/framework/blob/master/LICENSE.md  (MIT License)
  */
-namespace Tlumx\Application\Exception;
+namespace Tlumx\Tests\Application\Fixtures;
 
-class InvalidRouterException extends \Exception
+class BootstrapClassNotExtendBootstrapper
 {
 }

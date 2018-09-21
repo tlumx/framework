@@ -10,11 +10,12 @@
 namespace Tlumx\Tests\Application;
 
 use Tlumx\Application\Handler\ExceptionHandlerInterface;
+use Psr\Http\Message\ResponseInterface;
 use Zend\Diactoros\Response;
 
 class MyErrorHandler implements ExceptionHandlerInterface
 {
-    public function handle(\Exception $e)
+    public function handle(\Exception $e): ResponseInterface
     {
         $response = new Response();
 

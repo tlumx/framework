@@ -72,18 +72,29 @@ class BootstrapperTest extends \PHPUnit\Framework\TestCase
         $bootstrapperA = new ABootstrapper($this->container, $this->configure);
         $em = $this->container->get('event_manager');
 
-        $this->assertEquals(null, $em->trigger(AppEvent::EVENT_POST_BOOTSTRAP));
-        $this->assertEquals(null, $em->trigger(AppEvent::EVENT_PRE_ROUTING));
-        $this->assertEquals(null, $em->trigger(AppEvent::EVENT_POST_ROUTING));
-        $this->assertEquals(null, $em->trigger(AppEvent::EVENT_PRE_DISPATCH));
-        $this->assertEquals(null, $em->trigger(AppEvent::EVENT_POST_DISPATCH));
+        $e = new AppEvent(AppEvent::EVENT_POST_BOOTSTRAP);
+        $e->setContainer($this->container);
+        $this->assertEquals(null, $em->trigger($e));
+        $e->setName(AppEvent::EVENT_PRE_ROUTING);
+        $this->assertEquals(null, $em->trigger($e));
+        $e->setName(AppEvent::EVENT_POST_ROUTING);
+        $this->assertEquals(null, $em->trigger($e));
+        $e->setName(AppEvent::EVENT_PRE_DISPATCH);
+        $this->assertEquals(null, $em->trigger($e));
+        $e->setName(AppEvent::EVENT_POST_DISPATCH);
+        $this->assertEquals(null, $em->trigger($e));
 
         $bootstrapperB = new BBootstrapper($this->container, $this->configure);
-        $this->assertEquals('postBootstrap', $em->trigger(AppEvent::EVENT_POST_BOOTSTRAP));
-        $this->assertEquals('preRouting', $em->trigger(AppEvent::EVENT_PRE_ROUTING));
-        $this->assertEquals('postRouting', $em->trigger(AppEvent::EVENT_POST_ROUTING));
-        $this->assertEquals('preDispatch', $em->trigger(AppEvent::EVENT_PRE_DISPATCH));
-        $this->assertEquals('postDispatch', $em->trigger(AppEvent::EVENT_POST_DISPATCH));
+        $e->setName(AppEvent::EVENT_POST_BOOTSTRAP);
+        $this->assertEquals('postBootstrap', $em->trigger($e));
+        $e->setName(AppEvent::EVENT_PRE_ROUTING);
+        $this->assertEquals('preRouting', $em->trigger($e));
+        $e->setName(AppEvent::EVENT_POST_ROUTING);
+        $this->assertEquals('postRouting', $em->trigger($e));
+        $e->setName(AppEvent::EVENT_PRE_DISPATCH);
+        $this->assertEquals('preDispatch', $em->trigger($e));
+        $e->setName(AppEvent::EVENT_POST_DISPATCH);
+        $this->assertEquals('postDispatch', $em->trigger($e));
     }
 
     public function testGetConfig()

@@ -20,7 +20,7 @@ interface ExceptionHandlerInterface
      * Handle exception
      *
      * @param \Exception $e
-     * @return \Psr\Http\Message\ResponseInterface
+     * @return ResponseInterface
      */
     public function handle(\Exception $e): ResponseInterface;
 }

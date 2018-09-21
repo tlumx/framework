@@ -16,32 +16,32 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Container\ContainerInterface;
 
 /**
-* PSR-15 Psr\Http\Server\RequestHandlerInterface wrapper
-*/
+ * PSR-15 Psr\Http\Server\RequestHandlerInterface wrapper.
+ */
 class RequestHandler implements RequestHandlerInterface
 {
     /**
-    * @var string[] MiddlewareInterface name services
-    */
+     * @var string[] MiddlewareInterface name services
+     */
     private $middlewares;
 
     /**
-    * @var callable
-    */
+     * @var callable
+     */
     private $default;
 
     /**
-    * @var ContainerInterface
-    */
+     * @var ContainerInterface
+     */
     private $container;
 
     /**
-    * Constructor.
-    *
-    * @param array $middlewares
-    * @param callable $default
-    * @param ContainerInterface $container
-    */
+     * Constructor.
+     *
+     * @param array $middlewares
+     * @param callable $default
+     * @param ContainerInterface $container
+     */
     public function __construct(array $middlewares, callable $default, ContainerInterface $container)
     {
         $this->middlewares = $middlewares;
@@ -50,8 +50,8 @@ class RequestHandler implements RequestHandlerInterface
     }
 
     /**
-    * {@inheritdoc}
-    */
+     * {@inheritdoc}
+     */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $name = array_shift($this->middlewares);
@@ -66,17 +66,18 @@ class RequestHandler implements RequestHandlerInterface
     }
 
     /**
-    * Resolve middleware from Container.
-    *
-    * @param string $name middleware name in Container
-    *
-    * @return MiddlewareInterface
-    * @throws \LogicException
-    */
+     * Resolve middleware from Container.
+     *
+     * @param string $name middleware name in Container
+     *
+     * @return MiddlewareInterface
+     * @throws Exception\InvalidRequestHandlerResolveException
+     * @throws Exception\InvalidMiddlewareException
+     */
     private function resolve($name): MiddlewareInterface
     {
         if (!$this->container->has($name)) {
-            throw new \LogicException(
+            throw new Exception\InvalidRequestHandlerResolveException(
                 sprintf("Unable to resolve middleware \"%s\", it is not passed in the Container.", $name)
             );
         }
@@ -84,7 +85,7 @@ class RequestHandler implements RequestHandlerInterface
         $middleware = $this->container->get($name);
 
         if (!($middleware instanceof MiddlewareInterface)) {
-            throw new \LogicException(
+            throw new Exception\InvalidMiddlewareException(
                 sprintf(
                     "The middleware \"%s\" is not instanceof \"%s\".",
                     $name,

@@ -18,7 +18,7 @@ use Psr\Http\Message\ResponseInterface;
 class DefaultExceptionHandler implements ExceptionHandlerInterface
 {
     /**
-     * @var Psr\Container\ContainerInterface
+     * @var ContainerInterface
      */
     protected $container;
 
@@ -36,7 +36,7 @@ class DefaultExceptionHandler implements ExceptionHandlerInterface
      * Handle exception
      *
      * @param \Exception $e
-     * @return \Psr\Http\Message\ResponseInterface
+     * @return ResponseInterface
      */
     public function handle(\Exception $e): ResponseInterface
     {

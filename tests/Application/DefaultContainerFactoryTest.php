@@ -21,6 +21,9 @@ use Tlumx\View\ViewInterface;
 use Tlumx\Application\Handler\ExceptionHandlerInterface;
 use Tlumx\Application\Handler\NotFoundHandlerInterface;
 use Tlumx\View\TemplatesManager;
+use Tlumx\Application\Middleware\RouteMiddleware;
+use Tlumx\Application\Middleware\DispatchMiddleware;
+use Tlumx\Application\Exception\InvalidRouterConfigurationException;
 
 class DefaultContainerFactoryTest extends \PHPUnit\Framework\TestCase
 {
@@ -152,7 +155,7 @@ class DefaultContainerFactoryTest extends \PHPUnit\Framework\TestCase
         ]);
         $router = $this->container->get('router');
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidRouterConfigurationException::class);
         $this->expectExceptionMessage(sprintf(
             'Invalid configuration for route "%s": it must by in array.',
             'foo'
@@ -171,7 +174,7 @@ class DefaultContainerFactoryTest extends \PHPUnit\Framework\TestCase
         ]);
         $router = $this->container->get('router');
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidRouterConfigurationException::class);
         $this->expectExceptionMessage(sprintf(
             'Invalid configuration for route "%s": not isset route pattern.',
             'foo'
@@ -192,7 +195,7 @@ class DefaultContainerFactoryTest extends \PHPUnit\Framework\TestCase
         ]);
         $router = $this->container->get('router');
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidRouterConfigurationException::class);
         $this->expectExceptionMessage(sprintf(
             'Invalid configuration for route "%s": not isset route handler.',
             'foo'
@@ -229,7 +232,7 @@ class DefaultContainerFactoryTest extends \PHPUnit\Framework\TestCase
         ]);
         $router = $this->container->get('router');
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidRouterConfigurationException::class);
         $this->expectExceptionMessage(sprintf(
             'Invalid configuration for route group "%s": it must by in array.',
             'adm'
@@ -337,5 +340,15 @@ class DefaultContainerFactoryTest extends \PHPUnit\Framework\TestCase
         $this->assertTrue($this->container->hasAlias(NotFoundHandlerInterface::class));
         $actual = $this->container->getServiceIdFromAlias(NotFoundHandlerInterface::class);
         $this->assertEquals('not_found_handler', $actual);
+    }
+
+    public function testGetRouteMiddleware()
+    {
+        $this->assertInstanceOf(RouteMiddleware::class, $this->container->get('RouteMiddleware'));
+    }
+
+    public function testGetDispatchMiddleware()
+    {
+        $this->assertInstanceOf(DispatchMiddleware::class, $this->container->get('DispatchMiddleware'));
     }
 }

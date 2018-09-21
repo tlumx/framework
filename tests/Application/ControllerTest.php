@@ -10,16 +10,12 @@
 namespace Tlumx\Tests\Application;
 
 use Psr\Http\Server\RequestHandlerInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Container\ContainerInterface;
 use Tlumx\ServiceContainer\FactoryInterface;
 use Tlumx\View\TemplatesManager;
-use Tlumx\Router\Router;
 use Tlumx\Router\Result as RouteResult;
-use Tlumx\Application\ConfigureTlumxContainer;
 use Tlumx\Application\DefaultContainerFactory;
-use Tlumx\ServiceContainer\ServiceContainer;
+use Tlumx\Application\Exception\RouterResultNotFoundException;
+use Tlumx\Application\Exception\ActionNotFoundException;
 
 class ControllerTest extends \PHPUnit\Framework\TestCase
 {
@@ -198,7 +194,7 @@ class ControllerTest extends \PHPUnit\Framework\TestCase
     public function testHandleNoRouteResultSet()
     {
         $request = $this->container->get('request');
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RouterResultNotFoundException::class);
         $this->expectExceptionMessage("Must be a valid \"Tlumx\Router\Result\" objrct in the request attriute");
         $this->controller->handle($request);
     }
@@ -217,7 +213,7 @@ class ControllerTest extends \PHPUnit\Framework\TestCase
         );
         $request = $this->container->get('request');
         $request = $request->withAttribute(RouteResult::class, $result);
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(ActionNotFoundException::class);
         $this->expectExceptionMessage(sprintf(
             'Action "%s" not found.',
             'invalid'

@@ -10,16 +10,15 @@
 namespace Tlumx\Tests\Application;
 
 use Tlumx\Application\ApplicationEvent;
-use Tlumx\Application\Application;
-use Tlumx\EventManager\Event;
+use Psr\Container\ContainerInterface;
 use Tlumx\EventManager\EventInterface;
 
 class ApplicationEventTest extends \PHPUnit\Framework\TestCase
 {
-    public function getApplication()
+    public function getContainer()
     {
-        $app = $this->prophesize(Application::class)->reveal();
-        return $app;
+        $container = $this->prophesize(ContainerInterface::class)->reveal();
+        return $container;
     }
 
     public function testImplements()
@@ -28,24 +27,24 @@ class ApplicationEventTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf(EventInterface::class, $appEvent);
     }
 
-    public function testGetSetApplication()
+    public function testGetSetContainer()
     {
-        $app = $this->getApplication();
+        $container = $this->getContainer();
         $appEvent = new ApplicationEvent('');
 
         $class = new \ReflectionClass($appEvent);
-        $propertyApplication = $class->getProperty('application');
-        $propertyApplication->setAccessible(true);
+        $propertyContainer = $class->getProperty('container');
+        $propertyContainer->setAccessible(true);
         $propertyParams = $class->getProperty('params');
         $propertyParams->setAccessible(true);
 
-        $this->assertNull($propertyApplication->getValue($appEvent));
+        $this->assertNull($propertyContainer->getValue($appEvent));
         $this->assertEquals([], $propertyParams->getValue($appEvent));
-        $this->assertNull($appEvent->getApplication());
+        $this->assertNull($appEvent->getContainer());
 
-        $appEvent->setApplication($app);
-        $this->assertEquals($app, $propertyApplication->getValue($appEvent));
-        $this->assertEquals(['application' => $app], $propertyParams->getValue($appEvent));
-        $this->assertEquals($app, $appEvent->getApplication());
+        $appEvent->setContainer($container);
+        $this->assertEquals($container, $propertyContainer->getValue($appEvent));
+        $this->assertEquals(['container' => $container], $propertyParams->getValue($appEvent));
+        $this->assertEquals($container, $appEvent->getContainer());
     }
 }

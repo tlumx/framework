@@ -13,8 +13,7 @@ use Tlumx\Application\Bootstrapper;
 
 class InvalidServicesConfigBootstrapper extends Bootstrapper
 {
-	public function getServiceConfig()
-	{
-		
-	}
+    public function getServiceConfig()
+    {
+    }
 }

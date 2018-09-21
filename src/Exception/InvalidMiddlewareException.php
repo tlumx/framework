@@ -9,7 +9,6 @@
  */
 namespace Tlumx\Application\Exception;
 
-class InvalidRouterResultException extends \Exception
+class InvalidMiddlewareException extends \Exception
 {
-
 }

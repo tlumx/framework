@@ -13,5 +13,4 @@ use Tlumx\Application\Bootstrapper;
 
 class ABootstrapper extends Bootstrapper
 {
-
 }

@@ -20,7 +20,7 @@ interface NotFoundHandlerInterface
      * Handle
      *
      * @param array $allowedMethods
-     * @return \Psr\Http\Message\ResponseInterface
+     * @return ResponseInterface
      */
     public function handle(array $allowedMethods = []): ResponseInterface;
 }

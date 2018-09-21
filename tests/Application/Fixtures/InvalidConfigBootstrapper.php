@@ -13,8 +13,7 @@ use Tlumx\Application\Bootstrapper;
 
 class InvalidConfigBootstrapper extends Bootstrapper
 {
-	public function getConfig()
-	{
-
-	}
+    public function getConfig()
+    {
+    }
 }

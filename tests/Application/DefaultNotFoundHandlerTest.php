@@ -11,7 +11,6 @@ namespace Tlumx\Tests\Application;
 
 use Tlumx\Application\Handler\DefaultNotFoundHandler;
 use Tlumx\Application\DefaultContainerFactory;
-use Tlumx\ServiceContainer\ServiceContainer;
 
 class DefaultNotFoundHandlerTest extends \PHPUnit\Framework\TestCase
 {

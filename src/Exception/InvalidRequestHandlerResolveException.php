@@ -9,6 +9,6 @@
  */
 namespace Tlumx\Application\Exception;
 
-class InvalidBootstrapperClassException extends \Exception
+class InvalidRequestHandlerResolveException extends \Exception
 {
 }

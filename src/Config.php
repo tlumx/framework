@@ -10,66 +10,66 @@
 namespace Tlumx\Application;
 
 /**
-* Provides simplify access to configuration data.
-*/
+ * Provides simplify access to configuration data.
+ */
 class Config implements \ArrayAccess, \Countable, \IteratorAggregate
 {
     /**
-    * The configuration data.
-    *
-    * @var array
-    */
+     * The configuration data.
+     *
+     * @var array
+     */
     protected $items = [];
 
     /**
-    * Constructor.
-    *
-    * @param array $config
-    */
+     * Constructor.
+     *
+     * @param array $config
+     */
     public function __construct(array $config = [])
     {
         $this->items = $config;
     }
 
     /**
-    * Whether an key exists in this config.
-    *
-    * @param mixed $key
-    * @return bool
-    */
+     * Whether an key exists in this config.
+     *
+     * @param mixed $key
+     * @return bool
+     */
     public function has($key)
     {
         return isset($this->items[$key]);
     }
 
     /**
-    * Retrieve config item by the key.
-    *
-    * @param mixed $key
-    * @param mixed  $default
-    * @return mixed
-    */
+     * Retrieve config item by the key.
+     *
+     * @param mixed $key
+     * @param mixed  $default
+     * @return mixed
+     */
     public function get($key, $default = null)
     {
         return $this->has($key) ? $this->items[$key] : $default;
     }
 
     /**
-    * Retrieve all config items.
-    *
-    * @return array
-    */
+     * Retrieve all config items.
+     *
+     * @return array
+     */
     public function getAll()
     {
         return $this->items;
     }
 
     /**
-    * Set config item by the key.
-    *
-    * @param mixed $key
-    * @param mixed $value
-    */
+     * Set config item by the key.
+     *
+     * @param mixed $key
+     * @param mixed $value
+     */
     public function set($key, $value)
     {
         if (is_null($key)) {
@@ -90,8 +90,8 @@ class Config implements \ArrayAccess, \Countable, \IteratorAggregate
     }
 
     /**
-    * Remove all config items.
-    */
+     * Remove all config items.
+     */
     public function removeAll()
     {
         $this->items = [];
@@ -108,47 +108,47 @@ class Config implements \ArrayAccess, \Countable, \IteratorAggregate
     }
 
     /**
-    * Whether an offset exists.
-    *
-    * This method is executed when using isset() or empty().
-    *
-    * @param mixed $offset
-    * @return bool
-    */
+     * Whether an offset exists.
+     *
+     * This method is executed when using isset() or empty().
+     *
+     * @param mixed $offset
+     * @return bool
+     */
     public function offsetExists($offset)
     {
         return $this->has($offset);
     }
 
     /**
-    * Offset to retrieve
-    *
-    * Returns the value at specified offset.
-    *
-    * @param mixed $offset
-    * @return mixed
-    */
+     * Offset to retrieve
+     *
+     * Returns the value at specified offset.
+     *
+     * @param mixed $offset
+     * @return mixed
+     */
     public function offsetGet($offset)
     {
         return $this->get($offset);
     }
 
     /**
-    * Assign a value to the specified offset.
-    *
-    * @param mixed $offset
-    * @param mixed $value
-    */
+     * Assign a value to the specified offset.
+     *
+     * @param mixed $offset
+     * @param mixed $value
+     */
     public function offsetSet($offset, $value)
     {
         $this->set($offset, $value);
     }
 
     /**
-    * Unset an offset
-    *
-    * @param mixed $offset
-    */
+     * Unset an offset
+     *
+     * @param mixed $offset
+     */
     public function offsetUnset($offset)
     {
         $this->remove($offset);
@@ -165,36 +165,36 @@ class Config implements \ArrayAccess, \Countable, \IteratorAggregate
     }
 
     /**
-    * Merge this config data with given array.
-    *
-    * @var array $config
-    */
+     * Merge this config data with given array.
+     *
+     * @var array $config
+     */
     public function mergeWith(array $config)
     {
         $this->items = self::merge($this->items, $config);
     }
 
     /**
-    * Merge given array with this config data and replacing this data with the result.
-    *
-    * @var array $config
-    */
+     * Merge given array with this config data and replacing this data with the result.
+     *
+     * @var array $config
+     */
     public function mergeTo(array $config)
     {
         $this->items = self::merge($config, $this->items);
     }
 
     /**
-    * Merge two arrays.
-    *
-    * If two array has integer key - the value from the second array - appended to the first.
-    * If two array has array value - merged together.
-    * Else - the value will be overwrites by the value of the second array.
-    *
-    * @var array $a
-    * @var array $b
-    * @return array
-    */
+     * Merge two arrays.
+     *
+     * If two array has integer key - the value from the second array - appended to the first.
+     * If two array has array value - merged together.
+     * Else - the value will be overwrites by the value of the second array.
+     *
+     * @var array $a
+     * @var array $b
+     * @return array
+     */
     public static function merge(array $a, array $b)
     {
         foreach ($b as $key => $value) {

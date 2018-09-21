@@ -18,7 +18,7 @@ use Psr\Http\Message\ResponseInterface;
 class DefaultNotFoundHandler implements NotFoundHandlerInterface
 {
     /**
-     * @var Psr\Container\ContainerInterface
+     * @var ContainerInterface
      */
     protected $container;
 
@@ -36,7 +36,7 @@ class DefaultNotFoundHandler implements NotFoundHandlerInterface
      * Handle
      *
      * @param array $allowedMethods
-     * @return \Psr\Http\Message\ResponseInterface
+     * @return ResponseInterface
      */
     public function handle(array $allowedMethods = []): ResponseInterface
     {

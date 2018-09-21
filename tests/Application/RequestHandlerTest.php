@@ -17,6 +17,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Container\ContainerInterface;
 use Tlumx\Tests\Application\Fixtures\AMiddleware;
 use Tlumx\Tests\Application\Fixtures\BMiddleware;
+use Tlumx\Application\Exception\InvalidRequestHandlerResolveException;
+use Tlumx\Application\Exception\InvalidMiddlewareException;
 
 class RequestHandlerTest extends \PHPUnit\Framework\TestCase
 {
@@ -98,7 +100,7 @@ class RequestHandlerTest extends \PHPUnit\Framework\TestCase
             return $responseMock;
         }, $containerMock);
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidRequestHandlerResolveException::class);
         $this->expectExceptionMessage(sprintf(
             "Unable to resolve middleware \"%s\", it is not passed in the Container.",
             'a'
@@ -121,7 +123,7 @@ class RequestHandlerTest extends \PHPUnit\Framework\TestCase
             return $responseMock;
         }, $containerMock);
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidMiddlewareException::class);
         $this->expectExceptionMessage(sprintf(
             "The middleware \"%s\" is not instanceof \"%s\".",
             'a',

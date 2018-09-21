@@ -11,5 +11,4 @@ namespace Tlumx\Application\Exception;
 
 class InvalidControllerException extends \Exception
 {
-
 }

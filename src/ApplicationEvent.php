@@ -10,7 +10,11 @@
 namespace Tlumx\Application;
 
 use Tlumx\EventManager\Event;
+use Psr\Container\ContainerInterface;
 
+/*
+ * Application Event.
+ */
 class ApplicationEvent extends Event
 {
     /**
@@ -23,30 +27,30 @@ class ApplicationEvent extends Event
     const EVENT_POST_DISPATCH = 'event.post.dispatch';
 
     /**
-    * @var Application
-    */
-    protected $application;
+     * @var ContainerInterface
+     */
+    protected $container;
 
     /**
-     * Set application instance
+     * Set container instance
      *
-     * @param  Application $application
+     * @param  ContainerInterface $container
      */
-    public function setApplication(Application $application)
+    public function setContainer(ContainerInterface $container)
     {
         $params = $this->getParams();
-        $params['application'] = $application;
+        $params['container'] = $container;
         $this->setParams($params);
-        $this->application = $application;
+        $this->container = $container;
     }
 
     /**
-     * Get application instance
+     * Get container instance
      *
-     * @return Application
+     * @return ContainerInterface
      */
-    public function getApplication()
+    public function getContainer()
     {
-        return $this->application;
+        return $this->container;
     }
 }

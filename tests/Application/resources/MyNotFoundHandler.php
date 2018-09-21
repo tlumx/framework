@@ -10,11 +10,12 @@
 namespace Tlumx\Tests\Application;
 
 use Tlumx\Application\Handler\NotFoundHandlerInterface;
+use Psr\Http\Message\ResponseInterface;
 use Zend\Diactoros\Response;
 
 class MyNotFoundHandler implements NotFoundHandlerInterface
 {
-    public function handle(array $allowedMethods = [])
+    public function handle(array $allowedMethods = []): ResponseInterface
     {
         $response = new Response();
 
