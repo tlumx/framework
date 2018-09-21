@@ -15,7 +15,7 @@
 Use [Composer](https://getcomposer.org/) to install tlumx-servicecontainer.
 
 ```bash
-$ composer require tlumx/framework
+$ composer require tlumx/framework "^2.0"
 ```
 
 ## Usage
