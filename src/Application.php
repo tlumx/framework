@@ -9,10 +9,8 @@
  */
 namespace Tlumx\Application;
 
-use Psr\Http\Message\ServerRequestInterface;
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
-use Tlumx\EventManager\Event;
-use Tlumx\Router\Result as RouterResult;
 
 /**
  * Tlumx Application class.
@@ -22,111 +20,107 @@ class Application
     /**
      * Current framework version
      */
-    const VERSION = '1.0';
-
-    const EVENT_POST_BOOTSTRAP = 'event.post.bootstrap';
-    const EVENT_PRE_ROUTING = 'event.pre.routing';
-    const EVENT_POST_ROUTING = 'event.post.routing';
-    const EVENT_PRE_DISPATCH = 'event.pre.dispatch';
-    const EVENT_POST_DISPATCH = 'event.post.dispatch';
-
-    /**
-     * @var \Tlumx\ServiceProvider
-     */
-    protected $serviceProvider;
+    const VERSION = '2.0';
 
     /**
      * @var array
      */
-    protected $middlewares = [];
+    protected $defaultConfig = [
+        'error_reporting' => '-1',
+        'display_errors' => '1',
+        'display_exceptions' => true,
+        'router_cache_enabled' => false,
+        'router_cache_file' => 'routes.php.cache',
+        'response_chunk_size' => 4096
+    ];
 
     /**
-     * @var bool
+     * @var ContainerInterface
      */
-    protected $middlewareCanAdd = true;
+    protected $container;
 
     /**
-     * Constructor
+     * @var ConfigureContainerInterface
+     */
+    protected $configureContainer;
+
+    /**
+     * Constructor.
      *
-     * @param array $config
+     * @param array|ContainerInterface $containerOrConfig congiguration array or implementation of
+     *  ContainerInterface.
+     * @param null|ConfigureContainerInterface $configureContainer implementation of
+     *  ConfigureContainerInterface.
+     * @throws \InvalidArgumentException if param $containerOrConfig is not configuration array
+     *  or when it's not implement of ContainerInterface.
      */
-    public function __construct(array $config = [])
+    public function __construct($containerOrConfig, ConfigureContainerInterface $configureContainer = null)
     {
-        $this->serviceProvider = new ServiceProvider($config);
+        if ($configureContainer !== null) {
+            $this->setConfigureContainerObj($configureContainer);
+        }
+
+        if (is_array($containerOrConfig)) {
+            $config = array_merge($this->defaultConfig, $containerOrConfig);
+            $containerFactory = new DefaultContainerFactory();
+            $this->container = $containerFactory->create($config, $this->getConfigureContainerObj());
+        } elseif ($containerOrConfig instanceof ContainerInterface) {
+            $this->container = $containerOrConfig;
+        } else {
+            throw new \InvalidArgumentException('Invalid input parameter "containerOrConfig": '.
+                '"expected a ContainerInterface or congiguration array".');
+        }
     }
 
     /**
-     * Get config
+     * Set ConfigureContainer object (implement ConfigureContainerInterface)
+     *
+     * @param ConfigureContainerInterface $configureContainer
+     */
+    public function setConfigureContainerObj(ConfigureContainerInterface $configureContainer)
+    {
+        $this->configureContainer = $configureContainer;
+    }
+
+    /*
+     * Get ConfigureContainer object (implement ConfigureContainerInterface)
+     *
+     * @return ConfigureContainerInterface
+     */
+    public function getConfigureContainerObj()
+    {
+        if (!$this->configureContainer) {
+            $this->configureContainer = new ConfigureTlumxContainer();
+        }
+
+        return $this->configureContainer;
+    }
+
+    /**
+     * Get current application Container
+     *
+     * @return ContainerInterface
+     */
+    public function getContainer()
+    {
+        return $this->container;
+    }
+
+    /**
+     * Get config object or single config option
+     * Return current Config object if param "option" is null.
+     * Return single config option - by param "option", or,
+     *  if this option not exist - return "default" value.
      *
      * @param string|null $option
+     * @param mixed $default
      * @return mixed
      */
-    public function getConfig($option = null)
+    public function getConfig($option = null, $default = null)
     {
-        return $this->serviceProvider->getConfig($option);
-    }
+        $config = $this->getContainer()->get('config');
 
-    /**
-     * Set config
-     *
-     * @param mixed $option
-     * @param mixed $value
-     */
-    public function setConfig($option, $value = null)
-    {
-        $this->serviceProvider->setConfig($option, $value);
-    }
-
-    /**
-     * @return \Tlumx\ServiceProvider
-     */
-    public function getServiceProvider()
-    {
-        return $this->serviceProvider;
-    }
-
-    /**
-     * Add middleware
-     *
-     * @param mixed $middleware
-     * @throws \RuntimeException
-     * @throws \InvalidArgumentException
-     */
-    public function add($middleware)
-    {
-        if (!$this->middlewareCanAdd) {
-            throw new \RuntimeException('Middleware can’t be added');
-        }
-
-        if (is_string($middleware) && $this->getServiceProvider()->has($middleware)) {
-            $middleware = $this->getMiddlewareFromService($middleware);
-        }
-
-        if (!is_callable($middleware)) {
-            throw new \InvalidArgumentException('Middleware is not callable');
-        }
-
-        $this->middlewares[] = $middleware;
-    }
-
-    /**
-     * Get middleware from service provider as service
-     *
-     * @param string $service
-     * @return callable
-     */
-    private function getMiddlewareFromService($service)
-    {
-        return function ($request, $response, $next) use ($service) {
-            $mv = $this->getServiceProvider()->get($service);
-            if (!is_callable($mv)) {
-                throw new \RuntimeException(sprintf(
-                    'Middleware "%s" is not invokable',
-                    $service
-                ));
-            }
-            return $mv($request, $response, $next);
-        };
+        return ($option === null) ? $config : $config->get($option, $default);
     }
 
     /**
@@ -148,18 +142,14 @@ class Application
     }
 
     /**
-     * Run the list of application  bootstrapper
+     * Run application bootstrappers
      *
      * @throws Exception\BootstrapperClassNotFoundException
      * @throws Exception\InvalidBootstrapperClassException
      */
     protected function bootstrap()
     {
-        $bootstrappers = $this->getConfig('bootstrappers');
-
-        if (!is_array($bootstrappers)) {
-            return;
-        }
+        $bootstrappers = $this->getConfig('bootstrappers', []);
 
         foreach ($bootstrappers as $k => $class) {
             $class = (string) $class;
@@ -170,21 +160,24 @@ class Application
             }
 
             $r = new \ReflectionClass($class);
-            if (!$r->isSubclassOf('Tlumx\Bootstrapper')) {
+            if (!$r->isSubclassOf('Tlumx\Application\Bootstrapper')) {
                 throw new Exception\InvalidBootstrapperClassException(
-                    sprintf("Bootstrapper class \"%s\" must extend from Tlumx\\Bootstrapper", $class)
+                    sprintf(
+                        "Bootstrapper class \"%s\" must extend from Tlumx\\Application\\Bootstrapper",
+                        $class
+                    )
                 );
             }
 
-            $bootstrap = new $class($this);
+            $bootstrap = new $class($this->getContainer(), $this->getConfigureContainerObj());
         }
     }
 
     /**
-     * Run
+     * Run application
      *
      * @param bool $sendResponse
-     * @return \Psr\Http\Message\ResponseInterface
+     * @return ResponseInterface
      */
     public function run($sendResponse = true)
     {
@@ -193,38 +186,30 @@ class Application
         set_error_handler([$this, 'errorHandler']);
 
         try {
-            $em = $this->serviceProvider->getEventManager();
-            $event = new Event('', null, ['application' => $this]);
             $this->bootstrap();
-            $event->setName(self::EVENT_POST_BOOTSTRAP);
+
+            $em = $this->getContainer()->get('event_manager');
+            $event = new ApplicationEvent(ApplicationEvent::EVENT_POST_BOOTSTRAP);
+            $event->setContainer($this->getContainer());
             $em->trigger($event);
 
-            $this->middlewares[] = [$this, 'dispatchRouter'];
+            $middlewares = $this->getConfig('middlewares', []);
+            $middlewares[] = 'RouteMiddleware';
+            $middlewares[] = 'DispatchMiddleware';
 
-            $next = function ($request, $response) use (&$next) {
-                if (empty($this->middlewares)) {
-                    return $response;
-                }
-
-                $middleware = array_shift($this->middlewares);
-
-                $result = call_user_func($middleware, $request, $response, $next);
-                if ($result instanceof ResponseInterface === false) {
-                    throw new \RuntimeException(
-                        'Middleware must return instance of \Psr\Http\Message\ResponseInterface'
-                    );
-                }
-                return $result;
+            $default = function ($request) {
+                $notFoundHandler = $this->getContainer()->get('not_found_handler');
+                return $notFoundHandler->handle();
             };
 
-            $this->middlewareCanAdd = false;
-            $response = $next($this->serviceProvider->getRequest(), $this->serviceProvider->getResponse());
+            $handler = new RequestHandler($middlewares, $default, $this->getContainer());
+            $response = $handler->handle($this->getContainer()->get('request'));
         } catch (\Exception $e) {
             if (ob_get_level() !== 0) {
-                ob_clean();
+                ob_end_clean();
             }
 
-            $handler = $this->serviceProvider->getExceptionHandler();
+            $handler = $this->getContainer()->get('exception_handler');
             $response = $handler->handle($e);
         }
 
@@ -236,138 +221,7 @@ class Application
     }
 
     /**
-     * Dispatch the router
-     *
-     * @param ServerRequestInterface $request
-     * @param ResponseInterface $response
-     * @param callable $next
-     * @return ResponseInterface
-     * @throws \InvalidArgumentException
-     */
-    protected function dispatchRouter(ServerRequestInterface $request, ResponseInterface $response, callable $next)
-    {
-        $em = $this->serviceProvider->getEventManager();
-        $event = new Event('', null, ['application' => $this]);
-        $event->setName(self::EVENT_PRE_ROUTING);
-        $em->trigger($event);
-
-        $request = $this->serviceProvider->getRequest();
-        $router = $this->serviceProvider->getRouter();
-        $result = $router->match($request);
-        $request = $request->withAttribute('router_result', $result);
-        $params = $result->getParams();
-        foreach ($params as $name => $value) {
-            $request = $request->withAttribute($name, urldecode($value));
-        }
-        $this->serviceProvider->setRequest($request);
-
-        $event->setName(self::EVENT_POST_ROUTING);
-        $em->trigger($event);
-        $request = $this->serviceProvider->getRequest();
-
-        if ($result->isNotFound()) {
-            if ($result->isMethodNotAllowed()) {
-                $handler = $this->serviceProvider->getNotFoundHandler();
-                $response = $handler->handle($result->getAllowedMethods());
-            } else {
-                $handler = $this->serviceProvider->getNotFoundHandler();
-                $response = $handler->handle();
-            }
-
-            $this->serviceProvider->setResponse($response);
-
-            return $next($request, $response);
-        }
-
-        foreach ($result->getRouteMiddlewares() as $k => $middleware) {
-            if (is_string($middleware) && $this->serviceProvider->has($middleware)) {
-                $middleware = $this->getMiddlewareFromService($middleware);
-            }
-
-            if (!is_callable($middleware)) {
-                throw new \InvalidArgumentException('Middleware is not callable');
-            }
-
-            $this->middlewares[] = $middleware;
-        }
-
-        $this->middlewares[] = [$this, 'dispatch'];
-
-        return $next($request, $response);
-    }
-
-    /**
-     * Dispatch
-     *
-     * @param ServerRequestInterface $request
-     * @param ResponseInterface $response
-     * @param callable $next
-     * @return ResponseInterface
-     * @throws Exception\InvalidRouterResultException
-     * @throws Exception\InvalidRouterException
-     * @throws Exception\ControllerNotFoundException
-     * @throws Exception\InvalidControllerException
-     */
-    protected function dispatch(ServerRequestInterface $request, ResponseInterface $response, callable $next)
-    {
-        $em = $this->serviceProvider->getEventManager();
-        $event = new Event('', null, ['application' => $this]);
-        $event->setName(self::EVENT_PRE_DISPATCH);
-        $em->trigger($event);
-        $request = $this->serviceProvider->getRequest();
-
-        $result = $request->getAttribute('router_result');
-        if ($result instanceof RouterResult === false) {
-            throw new Exception\InvalidRouterResultException("Router result not isset in Request");
-        }
-
-        $handler = $result->getRouteHandler();
-        $handler['controller'] = isset($handler['controller']) ? $handler['controller'] : 'index';
-        $handler['action'] = isset($handler['action']) ? $handler['action'] : 'index';
-        if (!is_string($handler['controller'])) {
-            throw new Exception\InvalidRouterException('Invalid controller name in route handler');
-        }
-        if (!is_string($handler['action'])) {
-            throw new Exception\InvalidRouterException('Invalid action name in route handler');
-        }
-
-        $controllerName = $handler['controller'];
-        $controllers = $this->getConfig('controllers');
-        $controllerClass = isset($controllers[$controllerName]) ? $controllers[$controllerName] : null;
-        if (!class_exists($controllerClass)) {
-            throw new Exception\ControllerNotFoundException(sprintf(
-                'Controller "%s" not exist.',
-                $controllerName
-            ));
-        }
-
-        $r = new \ReflectionClass($controllerClass);
-        if (!$r->isSubclassOf('Tlumx\Application\Controller')) {
-            throw new Exception\InvalidControllerException(
-                sprintf(
-                    'Controller "%s" is not an instance of Tlumx\Application\Controller.',
-                    $controllerClass
-                )
-            );
-        }
-
-        $request = $request->withAttribute('router_result_handler', $handler);
-        $this->serviceProvider->setRequest($request);
-        $controller = new $controllerClass($this->serviceProvider);
-        $controller->run();
-
-        $request = $this->serviceProvider->getRequest();
-        $response = $this->serviceProvider->getResponse();
-
-        $event->setName(self::EVENT_POST_DISPATCH);
-        $em->trigger($event);
-        $request = $this->serviceProvider->getRequest();
-
-        return $next($request, $response);
-    }
-
-    /**
-     * Send Response
+     * Send the response to the client
      *
      * @param ResponseInterface $response
      */
@@ -381,29 +235,31 @@ class Application
             $response = $response->withHeader('Content-Length', (string) $response->getBody()->getSize());
         }
 
-        // Status Line
-        header(sprintf(
-            'HTTP/%s %d %s',
-            $response->getProtocolVersion(),
-            $response->getStatusCode(),
-            $response->getReasonPhrase()
-        ));
-
         // Headers
         foreach ($response->getHeaders() as $header => $values) {
-            $first = false;
+            $first = stripos($header, 'Set-Cookie') === 0 ? false : true;
             foreach ($values as $value) {
                 header(sprintf('%s: %s', $header, $value), $first);
                 $first = false;
             }
         }
 
+        // Status Line
+        header(sprintf(
+            'HTTP/%s %d %s',
+            $response->getProtocolVersion(),
+            $response->getStatusCode(),
+            $response->getReasonPhrase()
+        ), true, $response->getStatusCode());
+
         // Body
         $body = $response->getBody();
         $body->rewind();
 
+        $chunkSize = (int) $this->getConfig('response_chunk_size', 4096);
+
         while (!$body->eof()) {
-            echo $body->read(4096);
+            echo $body->read($chunkSize);
             if (connection_status() != CONNECTION_NORMAL) {
                 break;
             }
