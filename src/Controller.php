@@ -173,7 +173,7 @@ class Controller implements RequestHandlerInterface, FactoryInterface
             $this->setLayout($layout);
         }
 
-        $actionResponse = $this->$action();
+        $actionResponse = $this->$action($request);
         if ($actionResponse instanceof ResponseInterface) {
             return $actionResponse;
         }
