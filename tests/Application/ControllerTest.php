@@ -272,13 +272,16 @@ class ControllerTest extends \PHPUnit\Framework\TestCase
     {
         $result = RouteResult::createSuccess(
             'my-route',
-            ['a' => 10, 'b' => 'str1'],
+            ['a' => 10, 'b' => 'str1', 'action name' => 'beta'],
             ['GET', 'POST'],
             ['midd1', 'midd2'],
             ['controller' => 'foo', 'action' => 'beta']
         );
         $request = $this->container->get('request');
         $request = $request->withAttribute(RouteResult::class, $result);
+        foreach ($result->getParams() as $param => $value) {
+            $request = $request->withAttribute($param, $value);
+        }
         $actualResponse = $this->controller->handle($request);
         $body = $actualResponse->getBody();
         $body->rewind();

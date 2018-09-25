@@ -10,6 +10,7 @@
 namespace Foo;
 
 use Tlumx\Application\Controller;
+use Psr\Http\Message\ServerRequestInterface;
 
 class FooController extends Controller
 {
@@ -17,9 +18,10 @@ class FooController extends Controller
     {
     }
 
-    public function betaAction()
+    public function betaAction(ServerRequestInterface $request)
     {
-        return "beta";
+        $name = $request->getAttribute('action name', 'not beta action');
+        return $name;
     }
 
     public function gammaAction()
