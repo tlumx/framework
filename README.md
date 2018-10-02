@@ -12,7 +12,7 @@
 
 ## Installation
 
-Use [Composer](https://getcomposer.org/) to install tlumx-servicecontainer.
+Use [Composer](https://getcomposer.org/) to install Tlumx Framework.
 
 ```bash
 $ composer require tlumx/framework "^2.0"
